@@ -4,6 +4,11 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/ui": "~58.0.27",
+    "@journeyapps/wa-sqlite": "^2.0.10",
+    "@powersync/common": "^2.5.0",
+    "@powersync/react": "^2.2.0",
+    "@powersync/shared-internals": "^1.5.0",
+    "@powersync/web": "^2.6.0",
     "expo": "~58.0.23",
     "expo-constants": "~58.0.15",
     "expo-device": "~58.0.5",
@@ -36,7 +41,12 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "assets": "powersync-web copy-assets -o public",
+    "build:web": "node scripts/build-web.mjs",
+    "typecheck": "tsc --noEmit",
+    "postinstall": "powersync-web copy-assets -o public",
+    "test:offline": "node tests/offline-visit.e2e.cjs"
   },
   "private": true
 }

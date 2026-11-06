@@ -1,0 +1,5 @@
+# Le service worker doit toujours être relu, pour recevoir les mises à jour.
+/sw.js
+  Cache-Control: no-cache
+/manifest.json
+  Cache-Control: no-cache

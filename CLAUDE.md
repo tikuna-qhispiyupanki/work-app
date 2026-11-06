@@ -21,9 +21,9 @@ Documents de référence :
 
 1. CLAUDE.md et modèle de données ✅ (validé)
 2. Socle : authentification, entreprises et rôles, synchronisation hors-ligne, photos ← **en cours**
-   - 2a. Squelette Expo (SDK 58) et écran d'accueil ✅ (à valider)
-   - 2b. Base locale SQLite et synchronisation (prototype PowerSync)
-   - 2c. Connexion (Supabase Auth), entreprises, rôles et RLS
+   - 2a. Squelette Expo (SDK 58) et écran d'accueil ✅ (validé)
+   - 2b. Base locale SQLite (PowerSync web), application web installable et hors-ligne, première visite ✅ (à valider)
+   - 2c. Connexion (Supabase Auth), entreprises, rôles, RLS et synchronisation
    - 2d. Photos : compression, miniature, file d'envoi
 3. Grille de prix : import du fichier Excel
 4. Visite et devis
@@ -37,13 +37,15 @@ Plus tard : V1 bis cordistes (checklist de départ, carnet d'heures, registre EP
 
 ### Stack
 - Expo / React Native en **TypeScript strict**, une seule base de code pour iOS, Android et **web**. Le back-office est la version web de la même application (Expo Router).
-- Builds iOS avec EAS dans le cloud. Le téléphone de test est un **iPhone**.
+- **Phase de test sans aucun abonnement payant** (décision du fondateur) : l'iPhone utilise la **version web installable (PWA)**, ajoutée à l'écran d'accueil depuis Safari. Pas de compte Apple, pas de build EAS pour l'instant. La version native (EAS, App Store) viendra avant la commercialisation, avec le même code.
+- Conséquences PWA à garder en tête : pas d'envoi en arrière-plan (envoi quand l'application est ouverte), tester sur Safari iPhone, champs de saisie à 16 px minimum (sinon Safari zoome), ne jamais dépendre d'une API native absente du web sans solution de repli.
 - Serveur : **Supabase** (Postgres, Auth, Storage), région **Paris (eu-west-3)**. Jamais la région « Europe » générique.
 - Le code serveur reste du Postgres standard et portable : pas de dépendance inutile à des fonctions propres à Supabase, pour pouvoir changer d'hébergeur.
 - Phase de test : uniquement les offres gratuites. Toute dépense doit être validée avant.
 
 ### Hors-ligne complet
-- Toutes les écritures vont d'abord dans **SQLite sur le téléphone**, puis sont synchronisées avec Supabase. Moteur prévu : **PowerSync**, à confirmer par un prototype à l'étape 2.
+- Toutes les écritures vont d'abord dans **SQLite sur le téléphone**, puis sont synchronisées avec Supabase. Moteur : **PowerSync** (`@powersync/web`, stockage IndexedDB, fichiers du worker copiés dans `public/@powersync` par `npm run assets`). Le service de synchronisation PowerSync (offre gratuite ou auto-hébergé) sera branché à l'étape 2c.
+- Schéma local : `src/db/schema.ts`. Accès aux données : `src/db/*.ts`. Les écrans lisent avec `useQuery` de `@powersync/react`.
 - Conflits : **le dernier enregistrement gagne, champ par champ** (on n'envoie que les colonnes modifiées, chaque ligne a `updated_at`).
 - **Messages, photos, signatures et acquittements sont uniquement ajoutés** : jamais modifiés ni supprimés par la synchronisation.
 - Identifiants : **UUID générés sur le téléphone**, jamais d'identifiant auto-incrémenté.
@@ -105,7 +107,8 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Ajouter une librairie avec `npx expo install <paquet>`, jamais avec `npm install`.
 - Écrans dans `src/app/` (Expo Router) ; composants, logique et accès aux données hors de `src/app/`. Alias `@/` = `src/`.
 - Les dossiers `ios/` et `android/` ne sont jamais modifiés à la main : réglages dans `app.json`.
-- Avant de dire qu'une tâche est finie : `npx tsc --noEmit` et `npx expo export --platform web` doivent passer.
+- Avant de dire qu'une tâche est finie : `npm run typecheck` et `npm run build:web` doivent passer, et `npm run test:offline` (après `npx serve -s dist -l 8081`) pour tout ce qui touche au parcours terrain.
+- `npm run build:web` produit `dist/` : export Expo en mode « single page » + manifeste, icônes et service worker (`scripts/build-web.mjs`, `scripts/sw-template.js`).
 - Code et noms de tables en anglais. Textes de l'interface en français.
 - Les migrations SQL sont versionnées dans `supabase/migrations/`, une par changement. Chaque table métier a sa politique RLS dans la même migration.
 - Calcul du devis : fonction pure, testée par des tests unitaires qui reprennent l'exemple du calculateur Excel.

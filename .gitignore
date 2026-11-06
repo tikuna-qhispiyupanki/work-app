@@ -35,3 +35,5 @@ npm-debug.*
 web-build/
 yarn-debug.*
 yarn-error.*
+public/@powersync/
+tests/out-*.png
