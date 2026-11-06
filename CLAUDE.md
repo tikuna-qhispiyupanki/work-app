@@ -29,8 +29,8 @@ Documents de référence :
    - 2b. Base locale SQLite (PowerSync web), application web installable et hors-ligne, première visite ✅ (validé sur iPhone)
    - 2b bis. Visites : « Me localiser » (GPS + adresse IGN), « Situer l'adresse », carte IGN plan/aérien et image du plan, date planifiée, modifier, supprimer, statut « faite » ✅ (validé)
    - 2b ter. Carnet clients (suggestions pendant la saisie, reprise de l'adresse de la dernière visite, fiche et historique), arbres numérotés et nommés sur la carte (et sur l'image du plan), bouton « Ajouter au calendrier » (.ics) ✅ (validé)
-   - 2c-1. Serveur : tables, règles d'accès RLS, 12 tests, audit de sécurité Supabase ✅ (à valider)
-   - 2c-2. Connexion (e-mail + mot de passe) et création de l'entreprise
+   - 2c-1. Serveur : tables, règles d'accès RLS, 12 tests, audit de sécurité Supabase ✅ (validé)
+   - 2c-2. Connexion (e-mail + mot de passe, confirmation par e-mail), création de l'entreprise, « Mon compte » ✅ (à valider)
    - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur)
    - 2d. Photos : compression, miniature, file d'envoi
 3. Grille de prix : import du fichier Excel
@@ -115,6 +115,15 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Le GPS marche sans réseau. L'adresse et la carte ont besoin du réseau : il faut toujours prévoir le cas hors-ligne avec un message clair.
 - L'image du plan (JPEG 1 200 × 800 avec un repère et les coordonnées) est une ligne de `photos` (`kind = 'plan'`). Son fichier est gardé dans IndexedDB (`src/files/local-files.ts`). Une seule image de plan active par visite : l'ancienne est masquée.
 
+### Connexion et entreprise active
+- Supabase Auth, e-mail + mot de passe (8 caractères minimum), **confirmation par e-mail obligatoire** (choix du fondateur). Flux « implicit » : les liens d'e-mail marchent même ouverts dans Safari plutôt que dans l'application installée.
+- E-mails : l'expéditeur gratuit de Supabase envoie en anglais, au plus 2 e-mails par heure, et **seulement aux adresses des membres de l'organisation Supabase**. Avant d'ouvrir à d'autres entreprises : brancher un service d'envoi d'e-mails (SMTP) et traduire les modèles en français.
+- Écrans gardés par `Stack.Protected` (`src/app/_layout.tsx`) : non connecté → `/connexion` ; connecté sans entreprise → `/entreprise` ; sinon l'application.
+- Entreprise active et utilisateur : `src/auth/session.tsx`, mémorisés sur le téléphone pour s'ouvrir hors-ligne. Toute nouvelle donnée prend `currentIds()` (`src/auth/current.ts`) : jamais d'identifiant d'entreprise écrit en dur.
+- Données créées avant la première connexion (identifiants provisoires `LOCAL_COMPANY_ID` / `LOCAL_USER_ID`) : rattachées à l'entreprise à la connexion. **À l'étape 2c-3, l'envoi au serveur doit aussi remplacer ces identifiants provisoires dans les opérations en attente.**
+- Déconnexion : les données restent sur le téléphone tant que la synchronisation n'est pas branchée (sinon perte de ce qui n'est pas envoyé).
+- Tests de bout en bout : `npm run test:e2e` (`scripts/e2e.sh`) crée un compte de test temporaire dans Supabase, lance tous les tests, puis supprime le compte et ses données.
+
 ### Calendrier
 - Maintenant : fichier `.ics` par visite (`src/domain/calendar.ts`), avec un UID stable `visite-<id>@arboject` et des rappels la veille et 1 h avant. Sur iPhone, il s'ouvre par un lien `data:text/calendar` ; sur ordinateur, il se télécharge.
 - Après 2c : **abonnement de calendrier** (URL webcal servie par le serveur, avec un jeton secret par utilisateur), qui suit automatiquement les visites et les chantiers.
@@ -128,7 +137,8 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Ajouter une librairie avec `npx expo install <paquet>`, jamais avec `npm install`.
 - Écrans dans `src/app/` (Expo Router) ; composants, logique et accès aux données hors de `src/app/`. Alias `@/` = `src/`.
 - Les dossiers `ios/` et `android/` ne sont jamais modifiés à la main : réglages dans `app.json`.
-- Avant de dire qu'une tâche est finie : `npm run typecheck` et `npm run build:web` doivent passer, puis `npm run test:unit`, `npm run test:offline`, `npm run test:geo` et `npm run test:clients` (après `npx serve -s dist -l 8081`) pour tout ce qui touche au parcours terrain.
+- Avant de dire qu'une tâche est finie : `npm run typecheck` et `npm run build:web` doivent passer, puis `npm run test:unit` et `npm run test:e2e` (après `npx serve -s dist -l 8081`).
+- Ajout de librairie : `npx expo install` a besoin de api.expo.dev (bloqué dans l'environnement cloud) ; pour une librairie 100 % JavaScript sans lien avec la version d'Expo, `npm install` convient.
 - Composants qui utilisent le navigateur (DOM, canvas, IndexedDB) : fichier `.web.tsx`, plus un fichier `.tsx` de même interface pour le natif.
 - Environnement cloud de travail : « work-app » (accès réseau à data.geopf.fr, au site GitHub Pages, à docs.expo.dev, à la MSA et à Légifrance).
 - `npm run build:web` produit `dist/` : export Expo en mode « single page » + manifeste, icônes et service worker (`scripts/build-web.mjs`, `scripts/sw-template.js`).

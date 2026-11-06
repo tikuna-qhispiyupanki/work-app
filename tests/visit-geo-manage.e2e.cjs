@@ -1,6 +1,7 @@
 // Test de bout en bout : « Me localiser », adresse IGN, image du plan, modification, statut « faite », suppression.
 // Nécessite l'accès réseau à data.geopf.fr. Lancer : npx serve -s dist -l 8081, puis npm run test:geo
 const { chromium, devices } = require('playwright');
+const { login } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
 
@@ -21,6 +22,7 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   const fill = (label, v) => p.getByLabel(label, { exact: true }).fill(v);
 
   await p.goto(APP, { waitUntil: 'networkidle' });
+  await login(p);
   await p.getByText('+ Nouvelle visite').click();
   await fill('Nom', 'M. Grondin');
   await p.getByText('📍 Me localiser').click();

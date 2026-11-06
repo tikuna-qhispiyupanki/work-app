@@ -1,4 +1,6 @@
-import { db, LOCAL_COMPANY_ID, LOCAL_USER_ID, newId, nowIso } from './database';
+import { currentIds } from '@/auth/current';
+
+import { db, newId, nowIso } from './database';
 
 export type TreeRow = { id: string; number: number; species: string | null; lat: number | null; lng: number | null; notes: string | null };
 
@@ -9,6 +11,7 @@ export const VISIT_TREES_SQL = `
 // Ajoute un arbre avec le numéro suivant (1, 2, 3…). Les numéros ne sont jamais réutilisés
 // après une suppression, pour ne pas mélanger l'équipe si un ancien plan circule.
 export async function addTree(visitId: string, lat: number, lng: number): Promise<{ id: string; number: number }> {
+  const { companyId: COMPANY, userId: USER } = currentIds();
   const now = nowIso();
   const id = newId();
   let number = 1;
@@ -18,7 +21,7 @@ export async function addTree(visitId: string, lat: number, lng: number): Promis
     await tx.execute(
       `INSERT INTO trees (id, company_id, created_at, updated_at, created_by, visit_id, number, species, lat, lng)
        VALUES (?, ?, ?, ?, ?, ?, ?, '', ?, ?)`,
-      [id, LOCAL_COMPANY_ID, now, now, LOCAL_USER_ID, visitId, number, lat, lng]
+      [id, COMPANY, now, now, USER, visitId, number, lat, lng]
     );
   });
   return { id, number };

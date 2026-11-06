@@ -1,9 +1,10 @@
 import { PowerSyncContext } from '@powersync/react';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 
+import { AuthProvider, useAuth } from '@/auth/session';
 import { SyncStatus } from '@/components/sync-status';
 import { Colors } from '@/constants/theme';
 import { db, requestPersistentStorage } from '@/db/database';
@@ -20,35 +21,69 @@ export default function RootLayout() {
 
   return (
     <PowerSyncContext.Provider value={db}>
-      <StatusBar style="light" />
-      <View style={{ flex: 1, backgroundColor: Colors.background }}>
-        <View style={{ flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center' }}>
-          <Stack
-            screenOptions={{
-              headerStyle: { backgroundColor: Colors.primary },
-              headerTintColor: Colors.primaryText,
-              contentStyle: { backgroundColor: Colors.background },
-            }}
-          >
-            <Stack.Screen name="index" options={{ title: 'Arboject', headerTitle: () => <BrandTitle /> }} />
-            <Stack.Screen name="visites/nouvelle" options={{ title: 'Nouvelle visite' }} />
-            <Stack.Screen name="visites/[id]/index" options={{ title: 'Visite' }} />
-            <Stack.Screen name="visites/[id]/modifier" options={{ title: 'Modifier la visite' }} />
-            <Stack.Screen name="clients/index" options={{ title: 'Carnet clients' }} />
-            <Stack.Screen name="clients/[id]/index" options={{ title: 'Client' }} />
-            <Stack.Screen name="clients/[id]/modifier" options={{ title: 'Modifier le client' }} />
-          </Stack>
-          {error ? (
-            <Text style={{ color: Colors.warning, padding: 12 }}>Erreur de la base locale : {error}</Text>
-          ) : null}
-          <SyncStatus />
+      <AuthProvider>
+        <StatusBar style="light" />
+        <View style={{ flex: 1, backgroundColor: Colors.background }}>
+          <View style={{ flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center' }}>
+            <AppStack />
+            {error ? <Text style={{ color: Colors.warning, padding: 12 }}>Erreur de la base locale : {error}</Text> : null}
+          </View>
         </View>
-      </View>
+      </AuthProvider>
     </PowerSyncContext.Provider>
   );
 }
 
-// Logo + nom dans l'en-tête de l'accueil.
+// Écrans accessibles selon l'état : non connecté → connexion ;
+// connecté sans entreprise → création de l'entreprise ; sinon → l'application.
+function AppStack() {
+  const { status, company } = useAuth();
+  if (status === 'loading') {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: Colors.textSecondary, fontSize: 16 }}>Ouverture…</Text>
+      </View>
+    );
+  }
+  const signedIn = status === 'signedIn';
+  const ready = signedIn && company !== null;
+
+  return (
+    <>
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: Colors.primary },
+          headerTintColor: Colors.primaryText,
+          contentStyle: { backgroundColor: Colors.background },
+        }}
+      >
+        <Stack.Protected guard={ready}>
+          <Stack.Screen
+            name="index"
+            options={{ title: 'Arboject', headerTitle: () => <BrandTitle />, headerRight: () => <AccountButton /> }}
+          />
+          <Stack.Screen name="visites/nouvelle" options={{ title: 'Nouvelle visite' }} />
+          <Stack.Screen name="visites/[id]/index" options={{ title: 'Visite' }} />
+          <Stack.Screen name="visites/[id]/modifier" options={{ title: 'Modifier la visite' }} />
+          <Stack.Screen name="clients/index" options={{ title: 'Carnet clients' }} />
+          <Stack.Screen name="clients/[id]/index" options={{ title: 'Client' }} />
+          <Stack.Screen name="clients/[id]/modifier" options={{ title: 'Modifier le client' }} />
+          <Stack.Screen name="compte" options={{ title: 'Mon compte' }} />
+        </Stack.Protected>
+        <Stack.Protected guard={!signedIn}>
+          <Stack.Screen name="connexion" options={{ headerShown: false }} />
+        </Stack.Protected>
+        <Stack.Protected guard={signedIn && company === null}>
+          <Stack.Screen name="entreprise" options={{ title: 'Mon entreprise', headerTitle: () => <BrandTitle /> }} />
+        </Stack.Protected>
+        <Stack.Screen name="mot-de-passe" options={{ title: 'Nouveau mot de passe' }} />
+      </Stack>
+      {ready ? <SyncStatus /> : null}
+    </>
+  );
+}
+
+// Logo + nom dans l'en-tête.
 function BrandTitle() {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -59,5 +94,13 @@ function BrandTitle() {
       />
       <Text style={{ color: Colors.primaryText, fontSize: 20, fontWeight: '600' }}>Arboject</Text>
     </View>
+  );
+}
+
+function AccountButton() {
+  return (
+    <Pressable onPress={() => router.push('/compte')} accessibilityRole="button" accessibilityLabel="Mon compte" style={{ padding: 8 }}>
+      <Text style={{ color: Colors.primaryText, fontSize: 22 }}>👤</Text>
+    </Pressable>
   );
 }

@@ -9,6 +9,7 @@
     "@powersync/react": "^2.2.0",
     "@powersync/shared-internals": "^1.5.0",
     "@powersync/web": "^2.6.0",
+    "@supabase/supabase-js": "^2.119.0",
     "expo": "~58.0.23",
     "expo-constants": "~58.0.15",
     "expo-device": "~58.0.5",
@@ -49,7 +50,9 @@
     "test:offline": "node tests/offline-visit.e2e.cjs",
     "test:geo": "node tests/visit-geo-manage.e2e.cjs",
     "test:unit": "node --test 'tests/unit/*.test.cjs'",
-    "test:clients": "node tests/clients-trees.e2e.cjs"
+    "test:clients": "node tests/clients-trees.e2e.cjs",
+    "test:auth": "node tests/auth.e2e.cjs",
+    "test:e2e": "bash scripts/e2e.sh"
   },
   "private": true
 }

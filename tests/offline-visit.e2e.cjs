@@ -1,18 +1,21 @@
 // Test de bout en bout : créer une visite, recharger, couper le réseau, créer une visite hors-ligne.
 // Lancer : npm run build:web && npx serve -s dist -l 8081, puis npm run test:offline
 const { chromium, devices } = require('playwright');
+const { login } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 (async () => {
-  const b = await chromium.launch();
+  const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
+  const b = await chromium.launch({ proxy });
   const ctx = await b.newContext({ ...devices['iPhone 13'], locale: 'fr-FR', deviceScaleFactor: 2 });
   const p = await ctx.newPage();
   const errors = [];
   p.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
-  p.on('console', (m) => m.type() === 'error' && errors.push('console: ' + m.text()));
+  p.on('console', (m) => m.type() === 'error' && !/ERR_INTERNET_DISCONNECTED/.test(m.text()) && errors.push('console: ' + m.text())); // hors-ligne : échecs réseau attendus
   const fill = async (label, v) => p.getByLabel(label, { exact: true }).fill(v);
 
   await p.goto(APP, { waitUntil: 'networkidle' });
-  await p.getByText('Tout est enregistré sur le téléphone.').waitFor({ timeout: 15000 });
+  await login(p);
+  await p.getByText(/Tout est enregistré sur le téléphone|en attente d'envoi/).first().waitFor({ timeout: 15000 });
   console.log('1. base locale prête');
 
   await p.getByText('+ Nouvelle visite').click();

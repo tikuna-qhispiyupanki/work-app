@@ -1,6 +1,7 @@
 // Test de bout en bout : arbres sur la carte, image du plan avec arbres, carnet clients et historique.
 // Nécessite l'accès réseau à data.geopf.fr. Lancer : npx serve -s dist -l 8081, puis npm run test:clients
 const { chromium, devices } = require('playwright');
+const { login } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
 
@@ -23,6 +24,7 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
 
   // 1. Première visite avec localisation
   await p.goto(APP, { waitUntil: 'networkidle' });
+  await login(p);
   await p.getByText('+ Nouvelle visite').click();
   await field('Nom').fill('Mme Técher');
   await field('Téléphone').fill('0692 12 34 56');

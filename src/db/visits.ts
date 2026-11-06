@@ -1,7 +1,9 @@
 import { vatZoneFromPostalCode } from '@/domain/vat';
 import { deleteFile, saveFile } from '@/files/local-files';
 
-import { db, LOCAL_COMPANY_ID, LOCAL_USER_ID, newId, nowIso } from './database';
+import { currentIds } from '@/auth/current';
+
+import { db, newId, nowIso } from './database';
 
 export type VisitStatus = 'prevue' | 'faite';
 
@@ -28,6 +30,7 @@ const t = (s: string) => s.trim();
 
 // Crée la visite (et le client s'il est nouveau), dans la base du téléphone (fonctionne sans réseau).
 export async function createVisit(input: VisitInput, plan?: PlanImage | null): Promise<string> {
+  const { companyId: COMPANY, userId: USER } = currentIds();
   const now = nowIso();
   const clientId = input.clientId ?? newId();
   const visitId = newId();
@@ -42,7 +45,7 @@ export async function createVisit(input: VisitInput, plan?: PlanImage | null): P
       await tx.execute(
         `INSERT INTO clients (id, company_id, created_at, updated_at, created_by, kind, name, phone, email, address, postal_code, city)
          VALUES (?, ?, ?, ?, ?, 'particulier', ?, ?, ?, ?, ?, ?)`,
-        [clientId, LOCAL_COMPANY_ID, now, now, LOCAL_USER_ID, t(input.clientName), t(input.clientPhone),
+        [clientId, COMPANY, now, now, USER, t(input.clientName), t(input.clientPhone),
           t(input.clientEmail), t(input.siteAddress), t(input.sitePostalCode), t(input.siteCity)]
       );
     }
@@ -51,7 +54,7 @@ export async function createVisit(input: VisitInput, plan?: PlanImage | null): P
          site_address, site_postal_code, site_city, site_lat, site_lng, site_accuracy_m, vat_zone,
          access_notes, notes, near_power_lines, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'prevue')`,
-      [visitId, LOCAL_COMPANY_ID, now, now, LOCAL_USER_ID, clientId, input.visitedAt,
+      [visitId, COMPANY, now, now, USER, clientId, input.visitedAt,
         t(input.siteAddress), t(input.sitePostalCode), t(input.siteCity),
         input.siteLat, input.siteLng, input.siteAccuracyM, vatZoneFromPostalCode(input.sitePostalCode),
         t(input.accessNotes), t(input.notes), input.nearPowerLines ? 1 : 0]
@@ -65,6 +68,7 @@ export async function createVisit(input: VisitInput, plan?: PlanImage | null): P
 // (règle « le dernier gagne, champ par champ »). L'adresse du client n'est pas touchée :
 // c'est l'adresse du chantier, propre à la visite, qui change.
 export async function updateVisit(visitId: string, input: VisitInput, plan?: PlanImage | null): Promise<void> {
+  const { companyId: COMPANY, userId: USER } = currentIds();
   const now = nowIso();
   await db.writeTransaction(async (tx) => {
     const row = await tx.getOptional<{ client_id: string }>('SELECT client_id FROM visits WHERE id = ?', [visitId]);
@@ -77,7 +81,7 @@ export async function updateVisit(visitId: string, input: VisitInput, plan?: Pla
       await tx.execute(
         `INSERT INTO clients (id, company_id, created_at, updated_at, created_by, kind, name, address, postal_code, city)
          VALUES (?, ?, ?, ?, ?, 'particulier', ?, ?, ?, ?)`,
-        [clientId, LOCAL_COMPANY_ID, now, now, LOCAL_USER_ID, t(input.clientName), t(input.siteAddress),
+        [clientId, COMPANY, now, now, USER, t(input.clientName), t(input.siteAddress),
           t(input.sitePostalCode), t(input.siteCity)]
       );
     }
@@ -109,6 +113,7 @@ export async function deleteVisit(visitId: string): Promise<void> {
 
 // Enregistre l'image du plan. L'ancienne image de plan de la visite est masquée (une seule active).
 export async function savePlanImage(visitId: string, plan: PlanImage, lat: number | null, lng: number | null): Promise<void> {
+  const { companyId: COMPANY, userId: USER } = currentIds();
   const now = nowIso();
   const photoId = newId();
   await saveFile(photoId, plan.blob);
@@ -123,7 +128,7 @@ export async function savePlanImage(visitId: string, plan: PlanImage, lat: numbe
         `INSERT INTO photos (id, company_id, created_at, updated_at, created_by, owner_type, owner_id, kind,
            mime_type, width, height, bytes, taken_at, lat, lng, include_in_report)
          VALUES (?, ?, ?, ?, ?, 'visit', ?, 'plan', ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [photoId, LOCAL_COMPANY_ID, now, now, LOCAL_USER_ID, visitId, plan.blob.type, plan.width, plan.height,
+        [photoId, COMPANY, now, now, USER, visitId, plan.blob.type, plan.width, plan.height,
           plan.blob.size, now, lat, lng]
       );
     });
