@@ -34,6 +34,7 @@
     "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
+    "@powersync/service-sync-rules": "^0.45.0",
     "@types/react": "~19.3.0",
     "typescript": "~6.0.3"
   },
@@ -52,7 +53,8 @@
     "test:unit": "node --test 'tests/unit/*.test.cjs'",
     "test:clients": "node tests/clients-trees.e2e.cjs",
     "test:auth": "node tests/auth.e2e.cjs",
-    "test:e2e": "bash scripts/e2e.sh"
+    "test:e2e": "bash scripts/e2e.sh",
+    "check:sync": "node --js-explicit-resource-management scripts/validate-sync-config.cjs"
   },
   "private": true
 }

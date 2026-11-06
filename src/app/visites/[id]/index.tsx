@@ -11,6 +11,7 @@ import { Colors, Spacing } from '@/constants/theme';
 import { deleteVisit, setVisitStatus, VISIT_DETAIL_SQL, VISIT_PLAN_SQL } from '@/db/visits';
 import { formatPoint } from '@/domain/geo';
 import { VAT_ZONE_LABEL, VatZone } from '@/domain/vat';
+import { toDate } from '@/domain/dates';
 
 type VisitDetail = {
   id: string;
@@ -48,7 +49,7 @@ export default function VisitScreen() {
   if (!v) return <Muted>Visite introuvable (elle a peut-être été supprimée).</Muted>;
 
   const done = v.status === 'faite';
-  const when = new Date(v.visited_at).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' });
+  const when = toDate(v.visited_at).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' });
 
   const remove = async () => {
     const ok = await confirmAction(
@@ -66,7 +67,7 @@ export default function VisitScreen() {
     addToCalendar(
       {
         uid: `visite-${v.id}@arboject`,
-        start: new Date(v.visited_at),
+        start: toDate(v.visited_at),
         durationMinutes: 60,
         title: `Visite élagage – ${v.client_name || 'client'}`,
         location: address || undefined,

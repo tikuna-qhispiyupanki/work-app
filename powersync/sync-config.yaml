@@ -1,0 +1,28 @@
+# Arboject – règles de synchronisation PowerSync (« Sync Streams »).
+# Elles décident quelles lignes du serveur descendent sur chaque téléphone.
+# Elles reprennent les règles d'accès de la base (RLS) : PowerSync lit la base avec un rôle qui
+# contourne la RLS, donc ce fichier DOIT filtrer lui-même par entreprise et par rôle.
+# À coller dans le tableau de bord PowerSync (Sync Streams), puis « Deploy ».
+config:
+  edition: 3
+
+streams:
+  # Mon profil, mes appartenances et mes entreprises (tous les rôles).
+  mon_compte:
+    auto_subscribe: true
+    queries:
+      - SELECT * FROM profiles WHERE id = auth.user_id()
+      - SELECT * FROM memberships WHERE user_id = auth.user_id()
+      - SELECT * FROM companies WHERE id IN (SELECT company_id FROM memberships WHERE user_id = auth.user_id() AND active = true)
+
+  # Données de terrain de mes entreprises : gérant, bureau et chef d'équipe.
+  # Le technicien ne les reçoit pas (il recevra ses chantiers à l'étape 5).
+  donnees_terrain:
+    auto_subscribe: true
+    with:
+      mes_entreprises: SELECT company_id FROM memberships WHERE user_id = auth.user_id() AND active = true AND role != 'technicien'
+    queries:
+      - SELECT * FROM clients WHERE company_id IN mes_entreprises
+      - SELECT * FROM visits WHERE company_id IN mes_entreprises
+      - SELECT * FROM trees WHERE company_id IN mes_entreprises
+      - SELECT * FROM photos WHERE company_id IN mes_entreprises

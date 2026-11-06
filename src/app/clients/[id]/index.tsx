@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
 import { CLIENT_DETAIL_SQL, CLIENT_VISITS_SQL, ClientRow } from '@/db/clients';
+import { toDate } from '@/domain/dates';
 
 type HistoryRow = { id: string; visited_at: string; status: string; site_address: string | null; site_city: string | null; notes: string | null; tree_count: number };
 
@@ -36,7 +37,7 @@ export default function ClientScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>
                   {h.status === 'faite' ? '✓ ' : ''}
-                  {new Date(h.visited_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {toDate(h.visited_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </Text>
                 <Text style={styles.sub}>
                   {[[h.site_address, h.site_city].filter(Boolean).join(', '), h.tree_count ? `${h.tree_count} arbre${h.tree_count > 1 ? 's' : ''}` : null]

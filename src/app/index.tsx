@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
 import { VISITS_LIST_SQL } from '@/db/visits';
+import { toDate } from '@/domain/dates';
 
 type VisitRow = {
   id: string;
@@ -15,19 +16,19 @@ type VisitRow = {
   client_name: string | null;
 };
 
-const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();
+const isToday = (iso: string) => toDate(iso).toDateString() === new Date().toDateString();
 const formatTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  toDate(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 const formatDay = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  toDate(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
 // Accueil terrain : visites et chantiers du jour.
 export default function HomeScreen() {
   const { data: visits, isLoading } = useQuery<VisitRow>(VISITS_LIST_SQL);
   const startOfToday = new Date(new Date().toDateString()).getTime();
   const today = visits.filter((v) => isToday(v.visited_at));
-  const upcoming = visits.filter((v) => !isToday(v.visited_at) && new Date(v.visited_at).getTime() > startOfToday);
-  const earlier = visits.filter((v) => new Date(v.visited_at).getTime() < startOfToday).reverse();
+  const upcoming = visits.filter((v) => !isToday(v.visited_at) && toDate(v.visited_at).getTime() > startOfToday);
+  const earlier = visits.filter((v) => toDate(v.visited_at).getTime() < startOfToday).reverse();
 
   const date = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   const label = date.charAt(0).toUpperCase() + date.slice(1);

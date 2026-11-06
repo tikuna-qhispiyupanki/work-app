@@ -1,7 +1,9 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
+import { POWERSYNC_URL } from '@/config/powersync';
 import { db, LOCAL_COMPANY_ID, LOCAL_USER_ID } from '@/db/database';
+import { connector } from '@/sync/connector';
 
 import { setCurrentIds } from './current';
 import { supabase } from './supabase';
@@ -15,7 +17,7 @@ type AuthState = {
   company: ActiveCompany | null;
   companyStatus: 'unknown' | 'none' | 'ok' | 'offline';
   refreshCompany: () => Promise<void>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<{ ok: boolean; pending: number }>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -56,6 +58,18 @@ async function adoptLocalData(companyId: string, userId: string) {
   });
 }
 
+// Démarre la synchronisation avec le serveur (si elle est configurée).
+// Sans réseau, PowerSync attend et réessaie tout seul.
+let syncStarted = false;
+function startSync() {
+  if (!POWERSYNC_URL || syncStarted) return;
+  syncStarted = true;
+  db.connect(connector).catch((e: unknown) => {
+    syncStarted = false;
+    console.warn('Synchronisation impossible pour le moment', e);
+  });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthState['status']>('loading');
   const [session, setSession] = useState<Session | null>(null);
@@ -68,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (c) {
       setCurrentIds(c.id, userId);
       await adoptLocalData(c.id, userId);
+      startSync();
     }
   }, []);
 
@@ -84,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCompany(cached);
         setCurrentIds(cached.id, userId);
         setCompanyStatus('ok');
+        startSync(); // hors-ligne aussi : PowerSync enverra au retour du réseau
       }
       const { data, error } = await supabase
         .from('memberships')
@@ -127,11 +143,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     company,
     companyStatus,
     refreshCompany: () => loadCompany(session),
-    // Les données restent sur le téléphone : la synchronisation n'est pas encore branchée (2c-3),
-    // les effacer ferait perdre ce qui n'a pas été envoyé.
+    // Déconnexion refusée tant que des modifications ne sont pas envoyées (sinon elles seraient perdues).
+    // Une fois tout envoyé, les données du téléphone sont effacées : le prochain utilisateur ne les voit pas.
     signOut: async () => {
+      if (POWERSYNC_URL) {
+        const { count } = await db.getUploadQueueStats();
+        if (count > 0) return { ok: false, pending: count };
+        await db.disconnectAndClear();
+      }
+      // Sans synchronisation configurée : on garde les données (elles n'existent que sur ce téléphone).
+      syncStarted = false;
       await supabase.auth.signOut({ scope: 'local' });
       setCurrentIds(LOCAL_COMPANY_ID, LOCAL_USER_ID);
+      return { ok: true, pending: 0 };
     },
   };
 

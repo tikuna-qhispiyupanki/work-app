@@ -85,7 +85,33 @@ const photos = new Table(
   { indexes: { by_owner: ['owner_type', 'owner_id'] } }
 );
 
-export const AppSchema = new Schema({ clients, visits, trees, photos });
+// Reçues du serveur uniquement (jamais modifiées sur le téléphone).
+const companies = new Table({
+  name: column.text,
+  siret: column.text,
+  address: column.text,
+  postal_code: column.text,
+  city: column.text,
+  phone: column.text,
+  email: column.text,
+  vat_regime: column.text,
+  default_vat_zone: column.text,
+  quote_validity_days: column.integer,
+  quote_payment_terms: column.text,
+  quote_deposit_bp: column.integer,
+  formule: column.text,
+  created_at: column.text,
+  updated_at: column.text,
+});
+const memberships = new Table({
+  company_id: column.text,
+  user_id: column.text,
+  role: column.text,
+  active: column.integer,
+});
+const profiles = new Table({ full_name: column.text, phone: column.text });
+
+export const AppSchema = new Schema({ clients, visits, trees, photos, companies, memberships, profiles });
 
 export type Database = (typeof AppSchema)['types'];
 export type ClientRecord = Database['clients'];

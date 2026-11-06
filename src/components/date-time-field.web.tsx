@@ -1,11 +1,12 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Colors, Spacing } from '@/constants/theme';
+import { toDate } from '@/domain/dates';
 
 // Date et heure avec les sélecteurs natifs de l'iPhone (roulettes).
 // `value` est une date ISO ; l'affichage est en heure locale du téléphone.
 export function DateTimeField({ label, value, onChange }: { label: string; value: string; onChange: (iso: string) => void }) {
-  const d = new Date(value);
+  const d = toDate(value);
   const pad = (n: number) => String(n).padStart(2, '0');
   const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;

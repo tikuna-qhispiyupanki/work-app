@@ -11,6 +11,7 @@ import { ClientRow, CLIENTS_SEARCH_SQL, lastVisitOf } from '@/db/clients';
 import type { PlanImage, VisitInput } from '@/db/visits';
 import { formatPoint, geocodeAddress, getCurrentPosition, GeoPoint, reverseGeocode } from '@/domain/geo';
 import { VAT_ZONE_LABEL, vatZoneFromPostalCode } from '@/domain/vat';
+import { toDate } from '@/domain/dates';
 
 type Props = {
   initial: VisitInput;
@@ -57,7 +58,7 @@ export function VisitForm({ initial, hasPlan, submitLabel, onSubmit }: Props) {
         accessNotes: f.accessNotes || (last.access_notes ?? ''),
       }));
       setPlanDirty(true);
-      setClientMessage(`Adresse et accès repris de la visite du ${new Date(last.visited_at).toLocaleDateString('fr-FR')}. Modifie-les si le chantier est ailleurs.`);
+      setClientMessage(`Adresse et accès repris de la visite du ${toDate(last.visited_at).toLocaleDateString('fr-FR')}. Modifie-les si le chantier est ailleurs.`);
     } else {
       setClientMessage(null);
     }
@@ -163,7 +164,7 @@ export function VisitForm({ initial, hasPlan, submitLabel, onSubmit }: Props) {
               <Text style={styles.knownTitle}>📒 Client du carnet</Text>
               <Text style={styles.knownSub}>
                 {selectedClient.visit_count
-                  ? `${selectedClient.visit_count} visite${selectedClient.visit_count > 1 ? 's' : ''}, dernière le ${new Date(selectedClient.last_visit_at!).toLocaleDateString('fr-FR')}`
+                  ? `${selectedClient.visit_count} visite${selectedClient.visit_count > 1 ? 's' : ''}, dernière le ${toDate(selectedClient.last_visit_at).toLocaleDateString('fr-FR')}`
                   : 'Aucune visite enregistrée'}
               </Text>
               <Link href={{ pathname: '/clients/[id]', params: { id: selectedClient.id } }} style={styles.link}>
