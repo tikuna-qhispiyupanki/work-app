@@ -2,6 +2,7 @@
 const VERSION = '__VERSION__';
 const CACHE = `arboject-${VERSION}`;
 const PRECACHE = __PRECACHE__;
+const HOME = '__HOME__';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -22,7 +23,7 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   if (req.mode === 'navigate') {
-    event.respondWith(fetch(req).catch(() => caches.match('/', { cacheName: CACHE })));
+    event.respondWith(fetch(req).catch(() => caches.match(HOME, { cacheName: CACHE })));
     return;
   }
   event.respondWith(caches.match(req, { cacheName: CACHE }).then((hit) => hit || fetch(req)));

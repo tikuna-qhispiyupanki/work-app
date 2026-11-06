@@ -1,5 +1,7 @@
 import { PowerSyncDatabase, WASQLiteVFS } from '@powersync/web';
 
+import { BASE_PATH } from '@/config/base-path';
+
 import { AppSchema } from './schema';
 
 // Base locale du navigateur (version web / iPhone en « application web »).
@@ -10,7 +12,7 @@ export const db = new PowerSyncDatabase({
   database: {
     dbFilename: 'arboject.db',
     vfs: WASQLiteVFS.IDBBatchAtomicVFS,
-    worker: '/@powersync/worker.js',
+    worker: `${BASE_PATH}/@powersync/worker.js`,
     enableMultiTabs: false,
   },
 });
