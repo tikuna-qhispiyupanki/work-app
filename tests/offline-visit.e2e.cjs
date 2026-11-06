@@ -50,7 +50,7 @@ const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
   await p.getByText('Enregistrer la visite').click();
   await p.getByText('Visite du ').waitFor();
   await p.goBack();
-  await p.getByText('M. Hoarau').waitFor();
+  await p.getByText('M. Hoarau').filter({ visible: true }).first().waitFor();
   console.log('5. HORS LIGNE : 2e visite créée');
   console.log('   bandeau :', await p.getByText(/Hors ligne/).innerText());
   await p.screenshot({ path: 'tests/out-accueil-hors-ligne.png' });

@@ -46,7 +46,8 @@
     "build:web": "node scripts/build-web.mjs",
     "typecheck": "tsc --noEmit",
     "postinstall": "powersync-web copy-assets -o public",
-    "test:offline": "node tests/offline-visit.e2e.cjs"
+    "test:offline": "node tests/offline-visit.e2e.cjs",
+    "test:geo": "node tests/visit-geo-manage.e2e.cjs"
   },
   "private": true
 }

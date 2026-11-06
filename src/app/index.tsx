@@ -24,8 +24,10 @@ const formatDay = (iso: string) =>
 // Accueil terrain : visites et chantiers du jour.
 export default function HomeScreen() {
   const { data: visits, isLoading } = useQuery<VisitRow>(VISITS_LIST_SQL);
+  const startOfToday = new Date(new Date().toDateString()).getTime();
   const today = visits.filter((v) => isToday(v.visited_at));
-  const earlier = visits.filter((v) => !isToday(v.visited_at));
+  const upcoming = visits.filter((v) => !isToday(v.visited_at) && new Date(v.visited_at).getTime() > startOfToday);
+  const earlier = visits.filter((v) => new Date(v.visited_at).getTime() < startOfToday).reverse();
 
   const date = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   const label = date.charAt(0).toUpperCase() + date.slice(1);
@@ -48,6 +50,14 @@ export default function HomeScreen() {
         <Muted>Aucun chantier prévu aujourd&apos;hui.</Muted>
       </Card>
 
+      {upcoming.length > 0 ? (
+        <Card title="Visites à venir">
+          {upcoming.map((v) => (
+            <VisitItem key={v.id} visit={v} when={`${formatDay(v.visited_at)} ${formatTime(v.visited_at)}`} />
+          ))}
+        </Card>
+      ) : null}
+
       {earlier.length > 0 ? (
         <Card title="Visites précédentes">
           {earlier.map((v) => (
@@ -64,7 +74,10 @@ function VisitItem({ visit, when }: { visit: VisitRow; when: string }) {
     <Link href={{ pathname: '/visites/[id]', params: { id: visit.id } }} asChild>
       <Pressable style={styles.item}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.itemTitle}>{visit.client_name || 'Client sans nom'}</Text>
+          <Text style={[styles.itemTitle, visit.status === 'faite' && styles.done]}>
+            {visit.status === 'faite' ? '✓ ' : ''}
+            {visit.client_name || 'Client sans nom'}
+          </Text>
           <Text style={styles.itemSub}>
             {[visit.site_address, visit.site_city].filter(Boolean).join(', ') || 'Adresse à compléter'}
           </Text>
@@ -88,4 +101,5 @@ const styles = StyleSheet.create({
   },
   itemTitle: { fontSize: 17, fontWeight: '500', color: Colors.text },
   itemSub: { fontSize: 14, color: Colors.textSecondary },
+  done: { color: Colors.primary },
 });

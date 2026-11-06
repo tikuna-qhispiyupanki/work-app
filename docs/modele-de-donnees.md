@@ -72,12 +72,14 @@ Les montants sont en **centimes** (`_cents`, nombres entiers) et les pourcentage
 **clients** : `kind` (`particulier` | `professionnel`), `name`, `phone`, `email`, `address`, `postal_code`, `city`, `notes`.
 
 **visits**, la visite sur place :
-- `client_id`, `visited_at` ;
-- `site_address`, `site_postal_code`, `site_city`, `site_lat`, `site_lng` ;
+- `client_id`, `visited_at` (date et heure prévues, modifiables) ;
+- `site_address`, `site_postal_code`, `site_city`, `site_lat`, `site_lng`, `site_accuracy_m` (précision du GPS ; vide si la position vient de l'adresse) ;
 - `vat_zone` (déduite du code postal 974xx, modifiable) ;
 - `access_notes` (accès, stationnement, portail), `notes`, `dictation_text` ;
 - `near_power_lines` (oui/non, qui déclenche le rappel DT-DICT) ;
-- `status` (`brouillon` | `terminee`).
+- `status` (`prevue` | `faite`) ;
+- suppression : `deleted_at` (suppression « douce », avec confirmation).
+- Image du plan : une ligne `photos` avec `owner_type = 'visit'` et `kind = 'plan'`.
 
 **trees**, une fiche par arbre :
 - `visit_id`, `number` (1, 2, 3… repris sur le croquis) ;
@@ -144,7 +146,8 @@ Une fiche signée n'est plus modifiable. Pour corriger, on crée une nouvelle ve
 **messages** (uniquement ajoutés) : `job_id`, `author_id`, `kind` (`texte` | `vocal` | `photo`), `body`, `audio_path`, `photo_id`.
 
 **photos** (uniquement ajoutées) :
-- `owner_type` (`tree` | `visit` | `job` | `message` | `signature`…) et `owner_id` ;
+- `owner_type` (`tree` | `visit` | `job` | `message`…) et `owner_id` ;
+- `kind` (`photo` | `plan` | `croquis` | `signature`), `mime_type` ;
 - `storage_path`, `thumb_path`, `width`, `height`, `bytes`, `is_hd` ;
 - `taken_at`, `lat`, `lng`, `author_id` ;
 - `caption`, `include_in_report`.

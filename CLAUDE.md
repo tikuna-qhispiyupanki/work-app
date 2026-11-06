@@ -22,7 +22,8 @@ Documents de référence :
 1. CLAUDE.md et modèle de données ✅ (validé)
 2. Socle : authentification, entreprises et rôles, synchronisation hors-ligne, photos ← **en cours**
    - 2a. Squelette Expo (SDK 58) et écran d'accueil ✅ (validé)
-   - 2b. Base locale SQLite (PowerSync web), application web installable et hors-ligne, première visite ✅ (à valider)
+   - 2b. Base locale SQLite (PowerSync web), application web installable et hors-ligne, première visite ✅ (validé sur iPhone)
+   - 2b bis. Visites : « Me localiser » (GPS + adresse IGN), « Situer l'adresse », carte IGN plan/aérien et image du plan, date planifiée, modifier, supprimer, statut « faite » ✅ (à valider)
    - 2c. Connexion (Supabase Auth), entreprises, rôles, RLS et synchronisation
    - 2d. Photos : compression, miniature, file d'envoi
 3. Grille de prix : import du fichier Excel
@@ -99,6 +100,11 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Conservation : **2 ans** après la signature.
 - Elle est pré-remplie depuis la visite et le devis. Le texte exact de l'article est à revérifier sur Légifrance avant la mise en production.
 
+### Localisation et cartes
+- Service : **IGN Géoplateforme** (`data.geopf.fr`), gratuit et sans compte, qui couvre La Réunion. Adresses : `/geocodage/search` et `/geocodage/reverse`. Cartes : WMTS `PLANIGNV2` (plan) et `ORTHOIMAGERY.ORTHOPHOTOS` (vue aérienne). Mention « © IGN » obligatoire sur les cartes et les images.
+- Le GPS marche sans réseau. L'adresse et la carte ont besoin du réseau : il faut toujours prévoir le cas hors-ligne avec un message clair.
+- L'image du plan (JPEG 1 200 × 800 avec un repère et les coordonnées) est une ligne de `photos` (`kind = 'plan'`). Son fichier est gardé dans IndexedDB (`src/files/local-files.ts`). Une seule image de plan active par visite : l'ancienne est masquée.
+
 ### Sécurité
 - Près de lignes électriques : rappel DT-DICT sur le chantier.
 - L'application aide à respecter la réglementation, mais la décision et la responsabilité restent celles de l'employeur. Ce message doit apparaître dans les écrans de sécurité.
@@ -108,7 +114,9 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Ajouter une librairie avec `npx expo install <paquet>`, jamais avec `npm install`.
 - Écrans dans `src/app/` (Expo Router) ; composants, logique et accès aux données hors de `src/app/`. Alias `@/` = `src/`.
 - Les dossiers `ios/` et `android/` ne sont jamais modifiés à la main : réglages dans `app.json`.
-- Avant de dire qu'une tâche est finie : `npm run typecheck` et `npm run build:web` doivent passer, et `npm run test:offline` (après `npx serve -s dist -l 8081`) pour tout ce qui touche au parcours terrain.
+- Avant de dire qu'une tâche est finie : `npm run typecheck` et `npm run build:web` doivent passer, puis `npm run test:offline` et `npm run test:geo` (après `npx serve -s dist -l 8081`) pour tout ce qui touche au parcours terrain.
+- Composants qui utilisent le navigateur (DOM, canvas, IndexedDB) : fichier `.web.tsx`, plus un fichier `.tsx` de même interface pour le natif.
+- Environnement cloud de travail : « work-app » (accès réseau à data.geopf.fr, au site GitHub Pages, à docs.expo.dev, à la MSA et à Légifrance).
 - `npm run build:web` produit `dist/` : export Expo en mode « single page » + manifeste, icônes et service worker (`scripts/build-web.mjs`, `scripts/sw-template.js`).
 - Code et noms de tables en anglais. Textes de l'interface en français.
 - Les migrations SQL sont versionnées dans `supabase/migrations/`, une par changement. Chaque table métier a sa politique RLS dans la même migration.

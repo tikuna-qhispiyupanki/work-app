@@ -25,6 +25,19 @@ export function Button({ label, onPress, disabled }: { label: string; onPress: (
   );
 }
 
+export function SecondaryButton({ label, onPress, disabled, danger }: { label: string; onPress: () => void; disabled?: boolean; danger?: boolean }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [styles.secondary, danger && { borderColor: Colors.danger }, (pressed || disabled) && { opacity: 0.6 }]}
+    >
+      <Text style={[styles.secondaryText, danger && { color: Colors.danger }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function Field({ label, ...props }: { label: string } & TextInputProps) {
   return (
     <View style={{ gap: Spacing.xs }}>
@@ -60,6 +73,16 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: { color: Colors.primaryText, fontSize: 17, fontWeight: '600' },
+  secondary: {
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+  },
+  secondaryText: { color: Colors.primary, fontSize: 16, fontWeight: '600', textAlign: 'center' },
   label: { fontSize: 15, fontWeight: '500', color: Colors.text },
   input: {
     backgroundColor: Colors.card,
