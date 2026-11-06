@@ -48,6 +48,21 @@ const visits = new Table(
   { indexes: { by_date: ['visited_at'], by_client: ['client_id'] } }
 );
 
+// Arbres d'une visite, situés sur la carte et numérotés (1, 2, 3…) pour que l'équipe s'y retrouve.
+// Les autres champs de la fiche arbre (hauteur, intervention, contraintes) arrivent à l'étape 4.
+const trees = new Table(
+  {
+    ...common,
+    visit_id: column.text,
+    number: column.integer,
+    species: column.text, // nom ou essence : « Manguier », « Filao côté piscine »…
+    lat: column.real,
+    lng: column.real,
+    notes: column.text,
+  },
+  { indexes: { by_visit: ['visit_id', 'number'] } }
+);
+
 // Photos et images (plan, croquis, signatures…). Uniquement ajoutées : jamais modifiées par la synchronisation.
 // Le fichier lui-même est gardé sur le téléphone (src/files/local-files.ts) sous la même clé que `id`.
 const photos = new Table(
@@ -70,9 +85,10 @@ const photos = new Table(
   { indexes: { by_owner: ['owner_type', 'owner_id'] } }
 );
 
-export const AppSchema = new Schema({ clients, visits, photos });
+export const AppSchema = new Schema({ clients, visits, trees, photos });
 
 export type Database = (typeof AppSchema)['types'];
 export type ClientRecord = Database['clients'];
 export type VisitRecord = Database['visits'];
 export type PhotoRecord = Database['photos'];
+export type TreeRecord = Database['trees'];

@@ -7,8 +7,10 @@ export type VisitStatus = 'prevue' | 'faite';
 
 export type VisitInput = {
   visitedAt: string; // date et heure prévues de la visite (ISO)
+  clientId: string | null; // client du carnet ; vide = nouveau client
   clientName: string;
   clientPhone: string;
+  clientEmail: string;
   siteAddress: string;
   sitePostalCode: string;
   siteCity: string;
@@ -24,19 +26,26 @@ export type PlanImage = { blob: Blob; width: number; height: number };
 
 const t = (s: string) => s.trim();
 
-// Crée le client et la visite, dans la base du téléphone (fonctionne sans réseau).
+// Crée la visite (et le client s'il est nouveau), dans la base du téléphone (fonctionne sans réseau).
 export async function createVisit(input: VisitInput, plan?: PlanImage | null): Promise<string> {
   const now = nowIso();
-  const clientId = newId();
+  const clientId = input.clientId ?? newId();
   const visitId = newId();
 
   await db.writeTransaction(async (tx) => {
-    await tx.execute(
-      `INSERT INTO clients (id, company_id, created_at, updated_at, created_by, kind, name, phone, address, postal_code, city)
-       VALUES (?, ?, ?, ?, ?, 'particulier', ?, ?, ?, ?, ?)`,
-      [clientId, LOCAL_COMPANY_ID, now, now, LOCAL_USER_ID, t(input.clientName), t(input.clientPhone),
-        t(input.siteAddress), t(input.sitePostalCode), t(input.siteCity)]
-    );
+    if (input.clientId) {
+      await tx.execute(`UPDATE clients SET name = ?, phone = ?, email = ?, updated_at = ? WHERE id = ?`, [
+        t(input.clientName), t(input.clientPhone), t(input.clientEmail), now, clientId,
+      ]);
+    } else {
+      // Nouveau client : son adresse par défaut est celle du chantier.
+      await tx.execute(
+        `INSERT INTO clients (id, company_id, created_at, updated_at, created_by, kind, name, phone, email, address, postal_code, city)
+         VALUES (?, ?, ?, ?, ?, 'particulier', ?, ?, ?, ?, ?, ?)`,
+        [clientId, LOCAL_COMPANY_ID, now, now, LOCAL_USER_ID, t(input.clientName), t(input.clientPhone),
+          t(input.clientEmail), t(input.siteAddress), t(input.sitePostalCode), t(input.siteCity)]
+      );
+    }
     await tx.execute(
       `INSERT INTO visits (id, company_id, created_at, updated_at, created_by, client_id, visited_at,
          site_address, site_postal_code, site_city, site_lat, site_lng, site_accuracy_m, vat_zone,
@@ -48,33 +57,44 @@ export async function createVisit(input: VisitInput, plan?: PlanImage | null): P
         t(input.accessNotes), t(input.notes), input.nearPowerLines ? 1 : 0]
     );
   });
-  if (plan) await savePlanImage(visitId, plan, input);
+  if (plan) await savePlanImage(visitId, plan, input.siteLat, input.siteLng);
   return visitId;
 }
 
 // Modifie la visite et son client. Seuls les champs modifiés sont envoyés à la synchronisation
-// (règle « le dernier gagne, champ par champ »).
+// (règle « le dernier gagne, champ par champ »). L'adresse du client n'est pas touchée :
+// c'est l'adresse du chantier, propre à la visite, qui change.
 export async function updateVisit(visitId: string, input: VisitInput, plan?: PlanImage | null): Promise<void> {
   const now = nowIso();
   await db.writeTransaction(async (tx) => {
     const row = await tx.getOptional<{ client_id: string }>('SELECT client_id FROM visits WHERE id = ?', [visitId]);
     if (!row) throw new Error('Visite introuvable.');
+    let clientId = row.client_id;
+    if (input.clientId && input.clientId !== row.client_id) {
+      clientId = input.clientId; // la visite est rattachée à un autre client du carnet
+    } else if (!input.clientId) {
+      clientId = newId(); // « nouveau client » choisi pendant la modification
+      await tx.execute(
+        `INSERT INTO clients (id, company_id, created_at, updated_at, created_by, kind, name, address, postal_code, city)
+         VALUES (?, ?, ?, ?, ?, 'particulier', ?, ?, ?, ?)`,
+        [clientId, LOCAL_COMPANY_ID, now, now, LOCAL_USER_ID, t(input.clientName), t(input.siteAddress),
+          t(input.sitePostalCode), t(input.siteCity)]
+      );
+    }
+    await tx.execute(`UPDATE clients SET name = ?, phone = ?, email = ?, updated_at = ? WHERE id = ?`, [
+      t(input.clientName), t(input.clientPhone), t(input.clientEmail), now, clientId,
+    ]);
     await tx.execute(
-      `UPDATE clients SET name = ?, phone = ?, address = ?, postal_code = ?, city = ?, updated_at = ? WHERE id = ?`,
-      [t(input.clientName), t(input.clientPhone), t(input.siteAddress), t(input.sitePostalCode), t(input.siteCity),
-        now, row.client_id]
-    );
-    await tx.execute(
-      `UPDATE visits SET visited_at = ?, site_address = ?, site_postal_code = ?, site_city = ?,
+      `UPDATE visits SET client_id = ?, visited_at = ?, site_address = ?, site_postal_code = ?, site_city = ?,
          site_lat = ?, site_lng = ?, site_accuracy_m = ?, vat_zone = ?, access_notes = ?, notes = ?,
          near_power_lines = ?, updated_at = ?
        WHERE id = ?`,
-      [input.visitedAt, t(input.siteAddress), t(input.sitePostalCode), t(input.siteCity),
+      [clientId, input.visitedAt, t(input.siteAddress), t(input.sitePostalCode), t(input.siteCity),
         input.siteLat, input.siteLng, input.siteAccuracyM, vatZoneFromPostalCode(input.sitePostalCode),
         t(input.accessNotes), t(input.notes), input.nearPowerLines ? 1 : 0, now, visitId]
     );
   });
-  if (plan) await savePlanImage(visitId, plan, input);
+  if (plan) await savePlanImage(visitId, plan, input.siteLat, input.siteLng);
 }
 
 export async function setVisitStatus(visitId: string, status: VisitStatus): Promise<void> {
@@ -88,7 +108,7 @@ export async function deleteVisit(visitId: string): Promise<void> {
 }
 
 // Enregistre l'image du plan. L'ancienne image de plan de la visite est masquée (une seule active).
-async function savePlanImage(visitId: string, plan: PlanImage, input: VisitInput): Promise<void> {
+export async function savePlanImage(visitId: string, plan: PlanImage, lat: number | null, lng: number | null): Promise<void> {
   const now = nowIso();
   const photoId = newId();
   await saveFile(photoId, plan.blob);
@@ -104,7 +124,7 @@ async function savePlanImage(visitId: string, plan: PlanImage, input: VisitInput
            mime_type, width, height, bytes, taken_at, lat, lng, include_in_report)
          VALUES (?, ?, ?, ?, ?, 'visit', ?, 'plan', ?, ?, ?, ?, ?, ?, ?, 1)`,
         [photoId, LOCAL_COMPANY_ID, now, now, LOCAL_USER_ID, visitId, plan.blob.type, plan.width, plan.height,
-          plan.blob.size, now, input.siteLat, input.siteLng]
+          plan.blob.size, now, lat, lng]
       );
     });
   } catch (e) {
@@ -120,7 +140,7 @@ export const VISITS_LIST_SQL = `
   ORDER BY v.visited_at ASC`;
 
 export const VISIT_DETAIL_SQL = `
-  SELECT v.*, c.name AS client_name, c.phone AS client_phone
+  SELECT v.*, c.name AS client_name, c.phone AS client_phone, c.email AS client_email
   FROM visits v LEFT JOIN clients c ON c.id = v.client_id
   WHERE v.id = ? AND v.deleted_at IS NULL`;
 

@@ -7,6 +7,8 @@ import { updateVisit, VISIT_DETAIL_SQL, VISIT_PLAN_SQL } from '@/db/visits';
 
 type Row = {
   visited_at: string;
+  client_id: string;
+  client_email: string | null;
   client_name: string | null;
   client_phone: string | null;
   site_address: string | null;
@@ -33,8 +35,10 @@ export default function EditVisitScreen() {
     <VisitForm
       initial={{
         visitedAt: v.visited_at,
+        clientId: v.client_id,
         clientName: v.client_name ?? '',
         clientPhone: v.client_phone ?? '',
+        clientEmail: v.client_email ?? '',
         siteAddress: v.site_address ?? '',
         sitePostalCode: v.site_postal_code ?? '',
         siteCity: v.site_city ?? '',

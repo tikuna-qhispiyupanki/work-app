@@ -27,7 +27,8 @@ Documents de référence :
 2. Socle : authentification, entreprises et rôles, synchronisation hors-ligne, photos ← **en cours**
    - 2a. Squelette Expo (SDK 58) et écran d'accueil ✅ (validé)
    - 2b. Base locale SQLite (PowerSync web), application web installable et hors-ligne, première visite ✅ (validé sur iPhone)
-   - 2b bis. Visites : « Me localiser » (GPS + adresse IGN), « Situer l'adresse », carte IGN plan/aérien et image du plan, date planifiée, modifier, supprimer, statut « faite » ✅ (à valider)
+   - 2b bis. Visites : « Me localiser » (GPS + adresse IGN), « Situer l'adresse », carte IGN plan/aérien et image du plan, date planifiée, modifier, supprimer, statut « faite » ✅ (validé)
+   - 2b ter. Carnet clients (suggestions pendant la saisie, reprise de l'adresse de la dernière visite, fiche et historique), arbres numérotés et nommés sur la carte (et sur l'image du plan), bouton « Ajouter au calendrier » (.ics) ✅ (à valider)
    - 2c. Connexion (Supabase Auth), entreprises, rôles, RLS et synchronisation
    - 2d. Photos : compression, miniature, file d'envoi
 3. Grille de prix : import du fichier Excel
@@ -109,6 +110,10 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Le GPS marche sans réseau. L'adresse et la carte ont besoin du réseau : il faut toujours prévoir le cas hors-ligne avec un message clair.
 - L'image du plan (JPEG 1 200 × 800 avec un repère et les coordonnées) est une ligne de `photos` (`kind = 'plan'`). Son fichier est gardé dans IndexedDB (`src/files/local-files.ts`). Une seule image de plan active par visite : l'ancienne est masquée.
 
+### Calendrier
+- Maintenant : fichier `.ics` par visite (`src/domain/calendar.ts`), avec un UID stable `visite-<id>@arboject` et des rappels la veille et 1 h avant. Sur iPhone, il s'ouvre par un lien `data:text/calendar` ; sur ordinateur, il se télécharge.
+- Après 2c : **abonnement de calendrier** (URL webcal servie par le serveur, avec un jeton secret par utilisateur), qui suit automatiquement les visites et les chantiers.
+
 ### Sécurité
 - Près de lignes électriques : rappel DT-DICT sur le chantier.
 - L'application aide à respecter la réglementation, mais la décision et la responsabilité restent celles de l'employeur. Ce message doit apparaître dans les écrans de sécurité.
@@ -118,7 +123,7 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Ajouter une librairie avec `npx expo install <paquet>`, jamais avec `npm install`.
 - Écrans dans `src/app/` (Expo Router) ; composants, logique et accès aux données hors de `src/app/`. Alias `@/` = `src/`.
 - Les dossiers `ios/` et `android/` ne sont jamais modifiés à la main : réglages dans `app.json`.
-- Avant de dire qu'une tâche est finie : `npm run typecheck` et `npm run build:web` doivent passer, puis `npm run test:offline` et `npm run test:geo` (après `npx serve -s dist -l 8081`) pour tout ce qui touche au parcours terrain.
+- Avant de dire qu'une tâche est finie : `npm run typecheck` et `npm run build:web` doivent passer, puis `npm run test:unit`, `npm run test:offline`, `npm run test:geo` et `npm run test:clients` (après `npx serve -s dist -l 8081`) pour tout ce qui touche au parcours terrain.
 - Composants qui utilisent le navigateur (DOM, canvas, IndexedDB) : fichier `.web.tsx`, plus un fichier `.tsx` de même interface pour le natif.
 - Environnement cloud de travail : « work-app » (accès réseau à data.geopf.fr, au site GitHub Pages, à docs.expo.dev, à la MSA et à Légifrance).
 - `npm run build:web` produit `dist/` : export Expo en mode « single page » + manifeste, icônes et service worker (`scripts/build-web.mjs`, `scripts/sw-template.js`).

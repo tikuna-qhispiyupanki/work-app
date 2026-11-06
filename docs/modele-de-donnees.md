@@ -69,7 +69,8 @@ Les montants sont en **centimes** (`_cents`, nombres entiers) et les pourcentage
 
 ### Clients et visites
 
-**clients** : `kind` (`particulier` | `professionnel`), `name`, `phone`, `email`, `address`, `postal_code`, `city`, `notes`.
+**clients** : `kind` (`particulier` | `professionnel`), `name`, `phone`, `email`, `address`, `postal_code`, `city` (adresse du client, pour la facturation), `notes`.
+Le carnet clients et l'historique sont calculés à partir des visites (et plus tard des devis et des chantiers) liées au client : pas de table d'historique séparée.
 
 **visits**, la visite sur place :
 - `client_id`, `visited_at` (date et heure prévues, modifiables) ;
@@ -82,12 +83,13 @@ Les montants sont en **centimes** (`_cents`, nombres entiers) et les pourcentage
 - Image du plan : une ligne `photos` avec `owner_type = 'visit'` et `kind = 'plan'`.
 
 **trees**, une fiche par arbre :
-- `visit_id`, `number` (1, 2, 3… repris sur le croquis) ;
-- `species` (essence : manguier, filao, cocotier…), `height_m`, `trunk_diameter_cm` ;
+- `visit_id`, `number` (1, 2, 3… repris sur la carte, le plan et le croquis ; jamais réutilisé après suppression) ;
+- `lat`, `lng` (position placée sur la carte ou au GPS) ;
+- `species` (nom ou essence : « Manguier », « Filao côté piscine »…), `height_m`, `trunk_diameter_cm` (étape 4) ;
 - `intervention` (prestation choisie, lien vers `price_items`), `quantity` ;
 - contraintes cochées : `retention` (piscine, toit…), `big_trunk` (> 60 cm), `urgent`, `slope` (pente ou ravine), `far_disposal` (portage), `power_lines` ;
 - `estimated_ground_hours`, `estimated_climber_hours`, `waste_m3` ;
-- `notes`.
+- `notes` (repère pour l'équipe : « au fond à droite du portail »).
 
 **sketches**, le croquis : `visit_id`, `kind` (`page_blanche` | `sur_photo`), `base_photo_id`, `drawing` (les traits, enregistrés comme texte), `rendered_photo_id` (image finale, utilisée dans la fiche d'intervention et le rapport).
 

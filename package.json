@@ -47,7 +47,9 @@
     "typecheck": "tsc --noEmit",
     "postinstall": "powersync-web copy-assets -o public",
     "test:offline": "node tests/offline-visit.e2e.cjs",
-    "test:geo": "node tests/visit-geo-manage.e2e.cjs"
+    "test:geo": "node tests/visit-geo-manage.e2e.cjs",
+    "test:unit": "node --test 'tests/unit/*.test.cjs'",
+    "test:clients": "node tests/clients-trees.e2e.cjs"
   },
   "private": true
 }

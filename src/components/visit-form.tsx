@@ -1,10 +1,13 @@
-import { useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useQuery } from '@powersync/react';
+import { Link } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { DateTimeField } from '@/components/date-time-field';
-import { MapPicker, MapPickerHandle } from '@/components/map-picker';
+import { GeoMap, GeoMapHandle } from '@/components/geo-map';
 import { Button, Card, Field, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
+import { ClientRow, CLIENTS_SEARCH_SQL, lastVisitOf } from '@/db/clients';
 import type { PlanImage, VisitInput } from '@/db/visits';
 import { formatPoint, geocodeAddress, getCurrentPosition, GeoPoint, reverseGeocode } from '@/domain/geo';
 import { VAT_ZONE_LABEL, vatZoneFromPostalCode } from '@/domain/vat';
@@ -24,7 +27,55 @@ export function VisitForm({ initial, hasPlan, submitLabel, onSubmit }: Props) {
   const [geoMessage, setGeoMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [planDirty, setPlanDirty] = useState(!hasPlan);
-  const mapRef = useRef<MapPickerHandle>(null);
+  const mapRef = useRef<GeoMapHandle>(null);
+  const [clientMessage, setClientMessage] = useState<string | null>(null);
+
+  // Carnet clients : propositions pendant la saisie du nom (seulement pour un nouveau client).
+  const search = form.clientId ? '' : form.clientName.trim();
+  const { data: matches } = useQuery<ClientRow>(CLIENTS_SEARCH_SQL, [search, search, search, search]);
+  const suggestions = search.length >= 2 ? matches.slice(0, 5) : [];
+  const { data: selected } = useQuery<ClientRow>(
+    `SELECT c.id, c.name, (SELECT COUNT(*) FROM visits v WHERE v.client_id = c.id AND v.deleted_at IS NULL) AS visit_count,
+       (SELECT MAX(v.visited_at) FROM visits v WHERE v.client_id = c.id AND v.deleted_at IS NULL) AS last_visit_at
+     FROM clients c WHERE c.id = ?`,
+    [form.clientId ?? '']
+  );
+  const selectedClient = form.clientId ? selected[0] : undefined;
+
+  // Reprend l'adresse de la dernière visite du client, si celle du chantier n'est pas encore remplie.
+  const prefillFromLastVisit = async (clientId: string) => {
+    const last = await lastVisitOf(clientId);
+    if (last && !form.siteAddress.trim() && form.siteLat == null) {
+      setForm((f) => ({
+        ...f,
+        siteAddress: last.site_address ?? '',
+        sitePostalCode: last.site_postal_code ?? '',
+        siteCity: last.site_city ?? '',
+        siteLat: last.site_lat,
+        siteLng: last.site_lng,
+        siteAccuracyM: last.site_accuracy_m,
+        accessNotes: f.accessNotes || (last.access_notes ?? ''),
+      }));
+      setPlanDirty(true);
+      setClientMessage(`Adresse et accès repris de la visite du ${new Date(last.visited_at).toLocaleDateString('fr-FR')}. Modifie-les si le chantier est ailleurs.`);
+    } else {
+      setClientMessage(null);
+    }
+  };
+
+  const chooseClient = async (c: ClientRow) => {
+    setForm((f) => ({ ...f, clientId: c.id, clientName: c.name ?? '', clientPhone: c.phone ?? '', clientEmail: c.email ?? '' }));
+    await prefillFromLastVisit(c.id);
+  };
+
+  // Nouvelle visite ouverte depuis une fiche client : même reprise d'adresse.
+  useEffect(() => {
+    if (!hasPlan && initial.clientId && !initial.siteAddress && initial.siteLat == null) prefillFromLastVisit(initial.clientId);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const forgetClient = () => {
+    setForm((f) => ({ ...f, clientId: null }));
+    setClientMessage(null);
+  };
 
   const set = <K extends keyof VisitInput>(key: K) => (value: VisitInput[K]) => setForm((f) => ({ ...f, [key]: value }));
   const point: GeoPoint | null =
@@ -106,8 +157,47 @@ export function VisitForm({ initial, hasPlan, submitLabel, onSubmit }: Props) {
       </Card>
 
       <Card title="Client">
-        <Field label="Nom" value={form.clientName} onChangeText={set('clientName')} autoCapitalize="words" />
+        {selectedClient ? (
+          <View style={styles.known}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.knownTitle}>📒 Client du carnet</Text>
+              <Text style={styles.knownSub}>
+                {selectedClient.visit_count
+                  ? `${selectedClient.visit_count} visite${selectedClient.visit_count > 1 ? 's' : ''}, dernière le ${new Date(selectedClient.last_visit_at!).toLocaleDateString('fr-FR')}`
+                  : 'Aucune visite enregistrée'}
+              </Text>
+              <Link href={{ pathname: '/clients/[id]', params: { id: selectedClient.id } }} style={styles.link}>
+                Voir l&apos;historique
+              </Link>
+            </View>
+            <Pressable onPress={forgetClient} accessibilityRole="button" style={styles.change}>
+              <Text style={styles.link}>Nouveau client</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        <Field
+          label="Nom"
+          value={form.clientName}
+          onChangeText={set('clientName')}
+          autoCapitalize="words"
+          placeholder={form.clientId ? undefined : 'Tape le nom : les clients connus s\'affichent'}
+        />
+        {suggestions.length ? (
+          <View style={styles.suggestions}>
+            <Muted>Déjà dans le carnet :</Muted>
+            {suggestions.map((c) => (
+              <Pressable key={c.id} onPress={() => chooseClient(c)} style={styles.suggestion} accessibilityRole="button">
+                <Text style={styles.suggestionName}>{c.name}</Text>
+                <Text style={styles.knownSub}>
+                  {[c.city, c.phone, c.visit_count ? `${c.visit_count} visite${c.visit_count > 1 ? 's' : ''}` : null].filter(Boolean).join(' · ')}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+        {clientMessage ? <Muted>{clientMessage}</Muted> : null}
         <Field label="Téléphone" value={form.clientPhone} onChangeText={set('clientPhone')} keyboardType="phone-pad" />
+        <Field label="E-mail" value={form.clientEmail} onChangeText={set('clientEmail')} keyboardType="email-address" autoCapitalize="none" />
       </Card>
 
       <Card title="Lieu du chantier">
@@ -135,7 +225,14 @@ export function VisitForm({ initial, hasPlan, submitLabel, onSubmit }: Props) {
         {point ? (
           <>
             <Muted>Position : {formatPoint(point)}</Muted>
-            <MapPicker ref={mapRef} point={point} onMove={setPoint} onViewChange={() => setPlanDirty(true)} />
+            <GeoMap
+              ref={mapRef}
+              center={point}
+              markers={[{ id: 'site', kind: 'site', lat: point.lat, lng: point.lng }]}
+              onTap={setPoint}
+              onViewChange={() => setPlanDirty(true)}
+              hint="Touche la carte pour placer le repère sur le chantier. Glisse pour te déplacer."
+            />
             <Muted>
               {planDirty
                 ? "L'image de cette vue sera enregistrée avec la visite."
@@ -167,4 +264,12 @@ const styles = StyleSheet.create({
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm },
   switchLabel: { fontSize: 16, color: Colors.text, flex: 1 },
   warning: { fontSize: 15, color: Colors.warning, fontWeight: '500' },
+  known: { flexDirection: 'row', gap: Spacing.sm, backgroundColor: '#E6EFEC', borderRadius: 8, padding: Spacing.sm },
+  knownTitle: { fontSize: 15, fontWeight: '600', color: Colors.primary },
+  knownSub: { fontSize: 14, color: Colors.textSecondary },
+  link: { fontSize: 15, color: Colors.primary, fontWeight: '600', textDecorationLine: 'underline' },
+  change: { justifyContent: 'center' },
+  suggestions: { gap: Spacing.xs, borderWidth: 1, borderColor: Colors.border, borderRadius: 8, padding: Spacing.sm },
+  suggestion: { paddingVertical: 8, borderTopWidth: 1, borderTopColor: Colors.border },
+  suggestionName: { fontSize: 16, fontWeight: '600', color: Colors.text },
 });

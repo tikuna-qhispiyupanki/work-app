@@ -2,7 +2,7 @@ import { useQuery } from '@powersync/react';
 import { Link, router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, Muted } from '@/components/ui';
+import { Button, Card, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
 import { VISITS_LIST_SQL } from '@/db/visits';
 
@@ -36,7 +36,14 @@ export default function HomeScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.date}>{label}</Text>
 
-      <Button label="+ Nouvelle visite" onPress={() => router.push('/visites/nouvelle')} />
+      <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+        <View style={{ flex: 3 }}>
+          <Button label="+ Nouvelle visite" onPress={() => router.push('/visites/nouvelle')} />
+        </View>
+        <View style={{ flex: 2 }}>
+          <SecondaryButton label="📒 Clients" onPress={() => router.push('/clients')} />
+        </View>
+      </View>
 
       <Card title="Visites du jour">
         {isLoading ? <Muted>Chargement…</Muted> : null}

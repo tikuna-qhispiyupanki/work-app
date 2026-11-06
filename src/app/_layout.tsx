@@ -34,6 +34,9 @@ export default function RootLayout() {
             <Stack.Screen name="visites/nouvelle" options={{ title: 'Nouvelle visite' }} />
             <Stack.Screen name="visites/[id]/index" options={{ title: 'Visite' }} />
             <Stack.Screen name="visites/[id]/modifier" options={{ title: 'Modifier la visite' }} />
+            <Stack.Screen name="clients/index" options={{ title: 'Carnet clients' }} />
+            <Stack.Screen name="clients/[id]/index" options={{ title: 'Client' }} />
+            <Stack.Screen name="clients/[id]/modifier" options={{ title: 'Modifier le client' }} />
           </Stack>
           {error ? (
             <Text style={{ color: Colors.warning, padding: 12 }}>Erreur de la base locale : {error}</Text>
