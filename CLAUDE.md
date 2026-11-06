@@ -1,6 +1,6 @@
 # CLAUDE.md – Règles du projet (à relire à chaque session)
 
-Nom de code provisoire : **Cordage** (le nom définitif reste à choisir).
+Nom de l'application : **Arboject** (disponibilité INPI, nom de domaine et stores à vérifier).
 Application SaaS mobile et web pour les entreprises d'élagage et de travaux sur cordes. On commence par La Réunion.
 
 Documents de référence :
@@ -19,8 +19,12 @@ Documents de référence :
 
 ## Feuille de route
 
-1. CLAUDE.md et modèle de données ← **en cours**
-2. Socle : authentification, entreprises et rôles, synchronisation hors-ligne, photos
+1. CLAUDE.md et modèle de données ✅ (validé)
+2. Socle : authentification, entreprises et rôles, synchronisation hors-ligne, photos ← **en cours**
+   - 2a. Squelette Expo (SDK 58) et écran d'accueil ✅ (à valider)
+   - 2b. Base locale SQLite et synchronisation (prototype PowerSync)
+   - 2c. Connexion (Supabase Auth), entreprises, rôles et RLS
+   - 2d. Photos : compression, miniature, file d'envoi
 3. Grille de prix : import du fichier Excel
 4. Visite et devis
 5. Fiche d'intervention et chantier
@@ -96,7 +100,12 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Près de lignes électriques : rappel DT-DICT sur le chantier.
 - L'application aide à respecter la réglementation, mais la décision et la responsabilité restent celles de l'employeur. Ce message doit apparaître dans les écrans de sécurité.
 
-## Conventions de code (à préciser à l'étape 2)
+## Conventions de code
+- Expo SDK 58. Ne pas se fier à sa mémoire pour les API d'Expo : vérifier dans la documentation de la version 58.
+- Ajouter une librairie avec `npx expo install <paquet>`, jamais avec `npm install`.
+- Écrans dans `src/app/` (Expo Router) ; composants, logique et accès aux données hors de `src/app/`. Alias `@/` = `src/`.
+- Les dossiers `ios/` et `android/` ne sont jamais modifiés à la main : réglages dans `app.json`.
+- Avant de dire qu'une tâche est finie : `npx tsc --noEmit` et `npx expo export --platform web` doivent passer.
 - Code et noms de tables en anglais. Textes de l'interface en français.
 - Les migrations SQL sont versionnées dans `supabase/migrations/`, une par changement. Chaque table métier a sa politique RLS dans la même migration.
 - Calcul du devis : fonction pure, testée par des tests unitaires qui reprennent l'exemple du calculateur Excel.

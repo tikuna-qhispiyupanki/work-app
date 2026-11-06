@@ -178,6 +178,6 @@ Règle de base, appliquée par la base de données elle-même : **on ne voit une
 
 ## Points ouverts
 
-- Numérotation des devis hors-ligne (bloc réservé) : à valider avec le comptable.
+- Numérotation des devis hors-ligne (bloc réservé) : validée par le fondateur, à confirmer avec le comptable.
 - Texte exact de l'article R717-85-16 : à revérifier sur Légifrance.
 - Durées de conservation autres que celle de la fiche d'intervention (2 ans) : à fixer avec un juriste.
