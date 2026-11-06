@@ -29,7 +29,9 @@ Documents de référence :
    - 2b. Base locale SQLite (PowerSync web), application web installable et hors-ligne, première visite ✅ (validé sur iPhone)
    - 2b bis. Visites : « Me localiser » (GPS + adresse IGN), « Situer l'adresse », carte IGN plan/aérien et image du plan, date planifiée, modifier, supprimer, statut « faite » ✅ (validé)
    - 2b ter. Carnet clients (suggestions pendant la saisie, reprise de l'adresse de la dernière visite, fiche et historique), arbres numérotés et nommés sur la carte (et sur l'image du plan), bouton « Ajouter au calendrier » (.ics) ✅ (à valider)
-   - 2c. Connexion (Supabase Auth), entreprises, rôles, RLS et synchronisation
+   - 2c-1. Serveur : tables, règles d'accès RLS, 12 tests, audit de sécurité Supabase ✅ (à valider)
+   - 2c-2. Connexion (e-mail + mot de passe) et création de l'entreprise
+   - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur)
    - 2d. Photos : compression, miniature, file d'envoi
 3. Grille de prix : import du fichier Excel
 4. Visite et devis
@@ -47,6 +49,9 @@ Plus tard : V1 bis cordistes (checklist de départ, carnet d'heures, registre EP
 - **Dépôt public** : aucune clé secrète, aucun mot de passe, aucune donnée client réelle dans le dépôt. Seules les clés publiques prévues pour le navigateur (ex. clé « anon » Supabase) sont permises. Pas de compte Apple, pas de build EAS pour l'instant. La version native (EAS, App Store) viendra avant la commercialisation, avec le même code.
 - Conséquences PWA à garder en tête : pas d'envoi en arrière-plan (envoi quand l'application est ouverte), tester sur Safari iPhone, champs de saisie à 16 px minimum (sinon Safari zoome), ne jamais dépendre d'une API native absente du web sans solution de repli.
 - Serveur : **Supabase** (Postgres, Auth, Storage), région **Paris (eu-west-3)**. Jamais la région « Europe » générique.
+  - Projet : `arboject`, réf. `qtfhiehlhowbuweykyyu` (offre gratuite). URL et clé publique : `src/config/supabase.ts`. (L'autre projet du compte, à Londres, n'a rien à voir avec Arboject : ne pas y toucher.)
+  - Migrations : `supabase/migrations/`, appliquées dans l'ordre via l'API de gestion Supabase (`POST /v1/projects/<réf>/database/query`). Le jeton `sbp_` du fondateur est enregistré comme secret réseau de l'environnement « work-app » : jamais dans le code. Toujours tester d'abord en local (`supabase/README.md`), puis relancer `supabase/tests/rls_test.sql` et l'audit de sécurité (`/v1/projects/<réf>/advisors/security`) après chaque migration.
+  - Fonctions internes des règles d'accès dans le schéma `private` (non exposé). Seule remarque d'audit acceptée : `public.create_company` appelable par un utilisateur connecté (voulu).
 - Le code serveur reste du Postgres standard et portable : pas de dépendance inutile à des fonctions propres à Supabase, pour pouvoir changer d'hébergeur.
 - Phase de test : uniquement les offres gratuites. Toute dépense doit être validée avant.
 
