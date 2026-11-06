@@ -22,12 +22,12 @@ const manifest = {
   start_url: `${BASE}/`,
   scope: `${BASE}/`,
   display: 'standalone',
-  background_color: '#F6F5F0',
-  theme_color: '#2F6B3A',
+  background_color: '#E2DFD3',
+  theme_color: '#0E5450',
   icons: [
     { src: `${BASE}/icons/icon-192.png`, sizes: '192x192', type: 'image/png' },
     { src: `${BASE}/icons/icon-512.png`, sizes: '512x512', type: 'image/png' },
-    { src: `${BASE}/icons/icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    { src: `${BASE}/icons/icon-maskable-512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
   ],
 };
 writeFileSync(join(dist, 'manifest.json'), JSON.stringify(manifest, null, 2));
@@ -40,7 +40,7 @@ const head = [
   '<meta name="mobile-web-app-capable" content="yes">',
   '<meta name="apple-mobile-web-app-title" content="Arboject">',
   '<meta name="apple-mobile-web-app-status-bar-style" content="default">',
-  '<meta name="theme-color" content="#2F6B3A">',
+  '<meta name="theme-color" content="#0E5450">',
 ].join('');
 const indexPath = join(dist, 'index.html');
 let html = readFileSync(indexPath, 'utf8');

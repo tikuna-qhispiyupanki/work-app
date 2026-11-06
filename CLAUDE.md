@@ -17,6 +17,10 @@ Documents de référence :
 - Quand une décision lui appartient (prix, textes légaux, ergonomie), on la lui pose avec un choix recommandé.
 - Commits petits, en français, poussés sur GitHub (`tikuna-qhispiyupanki/work-app`) à chaque étape validée.
 
+## Identité visuelle
+- Logo : arbre en facettes avec un grimpeur encordé. Source : `assets/brand/logo-source.jpg` ; version nettoyée, sans le texte parasite : `assets/brand/logo.png`. Icônes générées dans `public/icons/` et `assets/images/`.
+- Couleurs : principale `#0E5450` (bleu-vert du logo), fond beige du logo `#E2DFD3`, fond des écrans `#F4F2EA`. Définies dans `src/constants/theme.ts`.
+
 ## Feuille de route
 
 1. CLAUDE.md et modèle de données ✅ (validé)

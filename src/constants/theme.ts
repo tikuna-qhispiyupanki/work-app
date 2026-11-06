@@ -1,8 +1,9 @@
 // Couleurs d'Arboject. Une seule palette claire pour l'instant (lisible en plein soleil).
 export const Colors = {
-  primary: '#2F6B3A', // vert feuillage
+  primary: '#0E5450', // bleu-vert profond, tiré du logo
   primaryText: '#FFFFFF',
-  background: '#F6F5F0',
+  background: '#F4F2EA',
+  brandBackground: '#E2DFD3', // fond beige du logo
   card: '#FFFFFF',
   text: '#1C1C1A',
   textSecondary: '#5E625A',

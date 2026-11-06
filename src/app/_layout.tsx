@@ -2,7 +2,7 @@ import { PowerSyncContext } from '@powersync/react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
 import { SyncStatus } from '@/components/sync-status';
 import { Colors } from '@/constants/theme';
@@ -30,7 +30,7 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: Colors.background },
             }}
           >
-            <Stack.Screen name="index" options={{ title: 'Arboject' }} />
+            <Stack.Screen name="index" options={{ title: 'Arboject', headerTitle: () => <BrandTitle /> }} />
             <Stack.Screen name="visites/nouvelle" options={{ title: 'Nouvelle visite' }} />
             <Stack.Screen name="visites/[id]/index" options={{ title: 'Visite' }} />
             <Stack.Screen name="visites/[id]/modifier" options={{ title: 'Modifier la visite' }} />
@@ -42,5 +42,19 @@ export default function RootLayout() {
         </View>
       </View>
     </PowerSyncContext.Provider>
+  );
+}
+
+// Logo + nom dans l'en-tête de l'accueil.
+function BrandTitle() {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <Image
+        source={require('../../assets/images/logo-96.png')}
+        style={{ width: 34, height: 34, borderRadius: 8 }}
+        accessibilityLabel="Logo Arboject"
+      />
+      <Text style={{ color: Colors.primaryText, fontSize: 20, fontWeight: '600' }}>Arboject</Text>
+    </View>
   );
 }
