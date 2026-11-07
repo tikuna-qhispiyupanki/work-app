@@ -14,17 +14,26 @@ cleanup() {
   # Fichiers photo du compte de test : supprimés par l'API de stockage (la base refuse la suppression directe).
   cos=$(echo "select coalesce(string_agg(company_id::text, ' '), '') as c from public.memberships where user_id = '$UID_TEST'" | sql | python3 -c "import sys,json; print(json.loads(sys.stdin.read().split(' ',1)[1])[0]['c'])")
   [ -n "$cos" ] && python3 scripts/cleanup-storage.py "$REF" $cos
-  sql <<SQL >/dev/null
+  out=$(sql <<SQL
 do \$\$ declare cids uuid[]; begin
   select array_agg(company_id) into cids from public.memberships where user_id = '$UID_TEST';
-  delete from public.price_items where company_id = any(cids); delete from public.price_grids where company_id = any(cids);
-  delete from public.photos where company_id = any(cids); delete from public.trees where company_id = any(cids);
-  delete from public.visits where company_id = any(cids); delete from public.clients where company_id = any(cids);
-  delete from public.memberships where company_id = any(cids); delete from public.companies where id = any(cids);
-  delete from public.profiles where id = '$UID_TEST'; delete from auth.users where id = '$UID_TEST';
+  -- Ordre : d'abord ce qui pointe vers autre chose (photos → arbres → visites → clients → grille → entreprise).
+  delete from public.photos where company_id = any(cids);
+  delete from public.trees where company_id = any(cids);
+  delete from public.visits where company_id = any(cids);
+  delete from public.clients where company_id = any(cids);
+  delete from public.price_items where company_id = any(cids);
+  delete from public.price_grids where company_id = any(cids);
+  delete from public.memberships where company_id = any(cids);
+  delete from public.companies where id = any(cids);
+  delete from public.profiles where id = '$UID_TEST';
+  delete from auth.users where id = '$UID_TEST';
 end \$\$;
 SQL
-  echo "Compte de test supprimé."
+)
+  case "$out" in 201*) ;; *) echo "⚠ NETTOYAGE ÉCHOUÉ : $out" ;; esac
+  left=$(echo "select count(*) as n from auth.users where id = '$UID_TEST'" | sql)
+  case "$left" in *'"n":0'*) echo "Compte de test supprimé." ;; *) echo "⚠ Le compte de test est toujours là : $left" ;; esac
 }
 trap cleanup EXIT
 cleanup >/dev/null
@@ -38,11 +47,12 @@ do \$\$ begin
   values (gen_random_uuid(), '$UID_TEST', '$UID_TEST', json_build_object('sub', '$UID_TEST', 'email', '$E2E_EMAIL', 'email_verified', true), 'email', now(), now(), now());
 end \$\$;
 SQL
-echo "Compte de test créé."
+created=$(echo "select count(*) as n from auth.users where id = '$UID_TEST'" | sql)
+case "$created" in *'"n":1'*) echo "Compte de test créé." ;; *) echo "⚠ Création du compte de test impossible : $created"; exit 1 ;; esac
 
 status=0
 if [ "${1:-}" = "--debug" ]; then shift; node "$@"; exit $?; fi
-TESTS="${*:-auth offline-visit visit-geo-manage clients-trees sync photos grid}"
+TESTS="${*:-auth offline-visit visit-geo-manage clients-trees sync photos grid tree-sheet}"
 for t in $TESTS; do
   echo "== $t"
   node "tests/$t.e2e.cjs" 2>&1 | grep -v "agent-proxy\|cdp.expo\|For details" || status=1

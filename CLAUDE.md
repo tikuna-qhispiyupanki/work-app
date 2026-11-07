@@ -33,8 +33,12 @@ Documents de référence :
    - 2c-2. Connexion (e-mail + mot de passe, confirmation par e-mail), création de l'entreprise, « Mon compte » ✅ (validé sur iPhone)
    - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur) ✅ (validé) : test à deux téléphones (`bash scripts/e2e.sh sync`) réussi — envoi, réception, modification croisée, hors-ligne puis retour du réseau, déconnexion/reconnexion. Instance Production : `https://6aeeb4c94d7433c80999f9fd.powersync.journeyapps.com` (Client Auth en mode manuel : JWKS `https://qtfhiehlhowbuweykyyu.supabase.co/auth/v1/.well-known/jwks.json`, audience `authenticated`). L'instance Development a été supprimée, ainsi que son compte d'accès à la base.
    - 2d. Photos : compression (1 600 px, JPEG 0,7, sans EXIF), miniature 320 px, option HD 3 200 px, file d'envoi avec reprise, stockage privé par entreprise, téléchargement par lien signé sur un autre appareil ✅ (validé)
-3. Grille de prix : import du fichier Excel ✅ (à valider sur iPhone) : tables `price_grids` / `price_items` (migration 4, tests RLS 17-19), lecture du .xlsx (`src/domain/xlsx.ts`, `fflate`), recalcul identique à Excel (`src/domain/pricing.ts`, `grid-import.ts`, tests unitaires sur le vrai fichier), écran « Grille de prix » (Mon compte), synchronisée entre appareils (`bash scripts/e2e.sh grid`).
-4. Visite et devis
+3. Grille de prix : import du fichier Excel ✅ (validé) : tables `price_grids` / `price_items` (migration 4, tests RLS 17-19), lecture du .xlsx (`src/domain/xlsx.ts`, `fflate`), recalcul identique à Excel (`src/domain/pricing.ts`, `grid-import.ts`, tests unitaires sur le vrai fichier), écran « Grille de prix » (Mon compte), synchronisée entre appareils (`bash scripts/e2e.sh grid`).
+4. Visite et devis ← **en cours**
+   - 4a. Fiche arbre complète (mesures, intervention de la grille avec suggestion selon la hauteur, quantité, contraintes, heures et m³, photos de l'arbre, estimation), arbre ajoutable sans carte (hors-ligne), estimation de la visite ✅ (à valider) — migration 5, moteur `src/domain/quote-calc.ts` (exemple du calculateur Excel au centime près), `tree-estimate.ts`, écran `src/app/arbres/[id].tsx`, test `tree-sheet`.
+   - 4b. Devis : calcul depuis la visite, franchise / TVA 8,5 % / 20 %, numérotation hors-ligne (blocs réservés), fiche entreprise
+   - 4c. Signature du client, verrouillage, PDF
+   - 4d. Croquis (main levée sur page blanche ou sur photo)
 5. Fiche d'intervention et chantier
 6. Fil du chantier et rapport client
 7. Tests sur les chantiers du fondateur (critère : un mois de devis sans papier)
@@ -128,7 +132,7 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Envoi (`src/sync/connector.ts`) : les identifiants provisoires `LOCAL_COMPANY_ID` / `LOCAL_USER_ID` sont remplacés au moment de l'envoi. Les refus définitifs du serveur (codes 22xxx, 23xxx, 42501) sont mis de côté et affichés dans « Mon compte » au lieu de bloquer la file. Les dates venant du serveur ont un espace au lieu du « T » : toujours les lire avec `toDate()` (`src/domain/dates.ts`).
 - Sous-traitant RGPD à déclarer : **PowerSync** (copie des données synchronisées), en plus de Supabase.
 - Tests : la synchronisation garde une connexion ouverte, donc ne jamais attendre `networkidle` dans Playwright.
-- Tests de bout en bout : `npm run test:e2e` (`scripts/e2e.sh`) crée un compte de test temporaire dans Supabase, lance tous les tests, puis supprime le compte et ses données.
+- Tests de bout en bout : `npm run test:e2e` (`scripts/e2e.sh`) crée un compte de test temporaire dans Supabase, lance tous les tests, puis supprime le compte et ses données. Le nettoyage supprime dans l'ordre des dépendances (photos → arbres → visites → clients → grille → entreprise) et **signale tout échec** : à mettre à jour à chaque nouvelle table. Les tests partagent le même compte : chaque test doit cibler ses propres données (nom de client unique), jamais « la première ligne trouvée ».
 
 ### Calendrier
 - Maintenant : fichier `.ics` par visite (`src/domain/calendar.ts`), avec un UID stable `visite-<id>@arboject` et des rappels la veille et 1 h avant. Sur iPhone, il s'ouvre par un lien `data:text/calendar` ; sur ordinateur, il se télécharge.

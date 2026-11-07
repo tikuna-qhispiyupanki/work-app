@@ -22,6 +22,8 @@ export type GridRow = {
 };
 export type PriceItemRow = {
   id: string;
+  height_min_m: number | null;
+  height_max_m: number | null;
   sort_order: number;
   label: string;
   category: string | null;
@@ -85,4 +87,20 @@ export async function setMyPrice(itemId: string, cents: number | null) {
 export async function setGridParam(gridId: string, column: string, value: number) {
   if (!PARAM_COLUMNS.some(([, c]) => c === column)) throw new Error('Paramètre inconnu');
   await db.execute(`UPDATE price_grids SET ${column} = ?, updated_at = ? WHERE id = ?`, [value, nowIso(), gridId]);
+}
+
+// Paramètres de la grille active, au format du moteur de calcul.
+export function gridParams(g: GridRow): GridParams {
+  return {
+    rateClimberCents: g.rate_climber_cents,
+    rateGroundCents: g.rate_ground_cents,
+    travelFlatCents: g.travel_flat_cents,
+    wastePerM3Cents: g.waste_per_m3_cents,
+    wasteCostPerM3Cents: g.waste_cost_per_m3_cents,
+    vatHexagoneBp: g.vat_hexagone_bp,
+    coefBp: g.coef_bp,
+    surchargeRetentionBp: g.surcharge_retention_bp,
+    surchargeBigTrunkBp: g.surcharge_big_trunk_bp,
+    surchargeUrgentBp: g.surcharge_urgent_bp,
+  };
 }

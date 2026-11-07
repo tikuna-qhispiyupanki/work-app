@@ -1,4 +1,5 @@
 import { useQuery } from '@powersync/react';
+import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -6,7 +7,10 @@ import { confirmAction } from '@/components/confirm';
 import { GeoMap, GeoMapHandle, MapMarker } from '@/components/geo-map';
 import { Card, Field, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
+import { ACTIVE_GRID_SQL, GRID_ITEMS_SQL, GridRow, gridParams, PriceItemRow } from '@/db/prices';
 import { addTree, deleteTree, TreeRow, updateTree, VISIT_TREES_SQL } from '@/db/trees';
+import { euros } from '@/domain/pricing';
+import { estimateTree } from '@/domain/tree-estimate';
 import { savePlanImage } from '@/db/visits';
 import { getCurrentPosition, GeoPoint } from '@/domain/geo';
 
@@ -15,6 +19,16 @@ type Mode = { kind: 'idle' } | { kind: 'add' } | { kind: 'move'; treeId: string;
 // Arbres de la visite : placés sur la carte, numérotés et nommés, pour que l'équipe s'y retrouve.
 export function VisitTrees({ visitId, site }: { visitId: string; site: GeoPoint | null }) {
   const { data: trees } = useQuery<TreeRow>(VISIT_TREES_SQL, [visitId]);
+  const { data: grids } = useQuery<GridRow>(ACTIVE_GRID_SQL);
+  const grid = grids[0];
+  const { data: items } = useQuery<PriceItemRow>(GRID_ITEMS_SQL, [grid?.id ?? '']);
+  const params = grid ? gridParams(grid) : null;
+  const estimate = (t: TreeRow) => {
+    if (!params) return null;
+    const item = items.find((i) => i.id === t.price_item_id) ?? items.find((i) => i.label === t.intervention) ?? null;
+    return estimateTree(t, item, params).total;
+  };
+  const visitTotal = params && trees.length ? trees.reduce((sum, t) => sum + (estimate(t) ?? 0), 0) + params.travelFlatCents : null;
   const [mode, setMode] = useState<Mode>({ kind: 'idle' });
   const [editing, setEditing] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -46,6 +60,11 @@ export function VisitTrees({ visitId, site }: { visitId: string; site: GeoPoint 
       setMessage(`Arbre n° ${mode.number} déplacé.`);
       setMode({ kind: 'idle' });
     }
+  };
+
+  const addWithoutMap = async () => {
+    const t = await addTree(visitId, null, null);
+    router.push({ pathname: '/arbres/[id]', params: { id: t.id } });
   };
 
   const addAtMyPosition = async () => {
@@ -116,6 +135,7 @@ export function VisitTrees({ visitId, site }: { visitId: string; site: GeoPoint 
           </View>
         </View>
       ) : null}
+      <SecondaryButton label="➕ Ajouter un arbre sans carte (hors-ligne)" onPress={addWithoutMap} />
       {message ? <Muted>{message}</Muted> : null}
 
       {trees.map((t) => (
@@ -126,14 +146,32 @@ export function VisitTrees({ visitId, site }: { visitId: string; site: GeoPoint 
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.treeName}>{t.species || 'Arbre sans nom'}</Text>
+              {t.intervention ? (
+                <Text style={styles.treeNotes}>
+                  {t.intervention}
+                  {estimate(t) != null ? ` · ≈ ${euros(estimate(t)!)} HT` : ''}
+                </Text>
+              ) : null}
               {t.notes ? <Text style={styles.treeNotes}>{t.notes}</Text> : null}
               {t.lat == null ? <Text style={styles.treeNotes}>Pas encore placé sur la carte</Text> : null}
             </View>
             <Text style={styles.chevron}>{editing === t.id ? '▲' : '▼'}</Text>
           </Pressable>
-          {editing === t.id ? <TreeEditor tree={t} onMove={() => setMode({ kind: 'move', treeId: t.id, number: t.number })} onDelete={() => remove(t)} /> : null}
+          {editing === t.id ? (
+            <>
+              <SecondaryButton label="📋 Fiche complète (mesures, intervention, contraintes, photos)" onPress={() => router.push({ pathname: '/arbres/[id]', params: { id: t.id } })} />
+              <TreeEditor tree={t} onMove={() => setMode({ kind: 'move', treeId: t.id, number: t.number })} onDelete={() => remove(t)} />
+            </>
+          ) : null}
         </View>
       ))}
+
+      {visitTotal != null ? (
+        <View style={styles.estimate}>
+          <Text style={styles.estimateText}>Estimation de la visite : ≈ {euros(visitTotal)} HT</Text>
+          <Muted>Arbres + déplacement. Le devis détaillé arrive à l&apos;étape suivante.</Muted>
+        </View>
+      ) : null}
 
       {placed.length && center ? (
         <SecondaryButton label="📷 Enregistrer l'image du plan avec les arbres" onPress={savePlan} disabled={busy} />
@@ -185,4 +223,6 @@ const styles = StyleSheet.create({
   treeNotes: { fontSize: 14, color: Colors.textSecondary },
   chevron: { fontSize: 14, color: Colors.textSecondary },
   editor: { gap: Spacing.sm, paddingLeft: 38 },
+  estimate: { backgroundColor: '#E6EFEC', borderRadius: 8, padding: Spacing.sm, gap: 2 },
+  estimateText: { fontSize: 17, fontWeight: '700', color: Colors.primary },
 });
