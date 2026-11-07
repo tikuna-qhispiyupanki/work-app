@@ -83,6 +83,13 @@ export function recomputeLine(l: Pick<QuoteLineDraft, 'kind' | 'quantity' | 'uni
 
 export const quoteTotals = (lineTotals: number[], vatBp: number) => totals(lineTotals, vatBp);
 
+// Totaux d'un devis : les lignes offertes (geste commercial) ne comptent pas, mais leur valeur est gardée.
+export function quoteTotalsFromLines(lines: { total_ht_cents: number; offered?: number | boolean | null }[], vatBp: number) {
+  const paid = lines.filter((l) => !l.offered).map((l) => l.total_ht_cents);
+  const offeredCents = lines.filter((l) => !!l.offered).reduce((a, l) => a + l.total_ht_cents, 0);
+  return { ...totals(paid, vatBp), offeredCents };
+}
+
 // « D-2026-0001 »
 export const formatQuoteNumber = (year: number, n: number) => `D-${year}-${String(n).padStart(4, '0')}`;
 

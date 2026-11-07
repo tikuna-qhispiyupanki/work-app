@@ -110,7 +110,7 @@ Le carnet clients et l'historique sont calculés à partir des visites (et plus 
 - `kind` : `prestation` | `heures_sol` | `heures_grimpeur` | `evacuation` | `deplacement` | `location` | `libre` ;
 - `tree_id` (facultatif), `price_item_id` (facultatif) ;
 - `label`, `unit`, `quantity`, `unit_price_ht_cents` (copiés) ;
-- `retention`, `big_trunk`, `urgent`, `surcharge_bp` (somme des majorations), `total_ht_cents`, `note`.
+- `retention`, `big_trunk`, `urgent`, `surcharge_bp` (somme des majorations), `total_ht_cents`, `offered` (1 = ligne offerte : geste commercial, hors total, valeur affichée), `note`.
 
 **quote_number_counters** (serveur) : `company_id`, `year`, `last_number`.
 

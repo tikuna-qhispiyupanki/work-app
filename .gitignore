@@ -38,3 +38,4 @@ yarn-error.*
 public/@powersync/
 tests/out-*.png
 public/grille-tarifaire-reunion-2026.xlsx
+tests/out-*.pdf

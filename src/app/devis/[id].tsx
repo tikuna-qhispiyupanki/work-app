@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/auth/session';
 import { confirmAction } from '@/components/confirm';
 import { NumberField } from '@/components/number-field';
+import { QuoteSign } from '@/components/quote-sign';
 import { Button, Card, Field, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
 import {
@@ -14,7 +15,9 @@ import {
 } from '@/db/quotes';
 import { toDate } from '@/domain/dates';
 import { euros, percent } from '@/domain/pricing';
-import { FRANCHISE_MENTION } from '@/domain/quote-build';
+import { FRANCHISE_MENTION, quoteTotalsFromLines } from '@/domain/quote-build';
+import { quotePdf } from '@/pdf/quote-pdf-data';
+import { shareFile } from '@/pdf/share';
 
 const STATUS: Record<string, string> = { brouillon: 'Brouillon', finalise: 'Finalisé', signe: '✓ Signé', refuse: 'Refusé' };
 
@@ -45,6 +48,7 @@ export default function QuoteScreen() {
     }
   };
   const day = (s: string | null) => (s ? toDate(s).toLocaleDateString('fr-FR') : '');
+  const offeredCents = quoteTotalsFromLines(lines, q.vat_rate_bp).offeredCents;
 
   const finalize = async () => {
     const ok = await confirmAction(
@@ -104,6 +108,7 @@ export default function QuoteScreen() {
         <Row label="Total HT" value={euros(q.subtotal_ht_cents)} />
         {q.vat_regime === 'franchise' ? <Muted>{FRANCHISE_MENTION}</Muted> : <Row label={`TVA ${percent(q.vat_rate_bp)}`} value={euros(q.vat_cents)} />}
         <Row label={q.vat_regime === 'franchise' ? 'Net à payer' : 'Total TTC'} value={euros(q.total_ttc_cents)} strong />
+        {offeredCents ? <Text style={styles.gift}>🎁 Geste commercial : {euros(offeredCents)} HT offerts</Text> : null}
         {q.deposit_bp ? <Muted>Acompte à la signature : {percent(q.deposit_bp)} soit {euros(Math.round((q.total_ttc_cents * q.deposit_bp) / 10000))}</Muted> : null}
       </Card>
 
@@ -135,8 +140,20 @@ export default function QuoteScreen() {
           />
         </>
       ) : (
-        <Muted>Signature du client et PDF : prochaine étape (4c).</Muted>
+        <QuoteSign quote={q} clientName={clientName} />
       )}
+      <SecondaryButton
+        label={busy ? 'Préparation du PDF…' : `📄 PDF du devis${draft ? ' (brouillon)' : ''}`}
+        disabled={busy}
+        onPress={async () => {
+          setBusy(true);
+          await run(async () => {
+            const pdf = await quotePdf(q.id);
+            await shareFile(pdf.data, pdf.fileName);
+          });
+          setBusy(false);
+        }}
+      />
     </ScrollView>
   );
 }
@@ -152,7 +169,7 @@ function LineEditor({ quoteId, line, editable, onError }: { quoteId: string; lin
           {String(line.quantity).replace('.', ',')} {line.unit ?? ''} × {euros(line.unit_price_ht_cents)}
           {line.surcharge_bp ? ` + ${percent(line.surcharge_bp)}` : ''}
         </Muted>
-        <Text style={styles.lineTotal}>{euros(line.total_ht_cents)} HT</Text>
+        <Text style={styles.lineTotal}>{line.offered ? `Offert (valeur ${euros(line.total_ht_cents)} HT)` : `${euros(line.total_ht_cents)} HT`}</Text>
       </View>
     );
   }
@@ -167,16 +184,20 @@ function LineEditor({ quoteId, line, editable, onError }: { quoteId: string; lin
           <NumberField label="Prix unitaire HT" unit="€" value={line.unit_price_ht_cents / 100} onCommit={(v) => v != null && change({ unit_price_ht_cents: Math.round(v * 100) })} allowEmpty={false} />
         </View>
       </View>
-      {line.kind === 'prestation' ? (
-        <View style={styles.chips}>
-          <Chip label="Rétention" on={!!line.retention} onPress={() => change({ retention: line.retention ? 0 : 1 })} />
-          <Chip label="Tronc > 60 cm" on={!!line.big_trunk} onPress={() => change({ big_trunk: line.big_trunk ? 0 : 1 })} />
-          <Chip label="Urgence" on={!!line.urgent} onPress={() => change({ urgent: line.urgent ? 0 : 1 })} />
-        </View>
-      ) : null}
+      <View style={styles.chips}>
+        {line.kind === 'prestation' ? (
+          <>
+            <Chip label="Rétention" on={!!line.retention} onPress={() => change({ retention: line.retention ? 0 : 1 })} />
+            <Chip label="Tronc > 60 cm" on={!!line.big_trunk} onPress={() => change({ big_trunk: line.big_trunk ? 0 : 1 })} />
+            <Chip label="Urgence" on={!!line.urgent} onPress={() => change({ urgent: line.urgent ? 0 : 1 })} />
+          </>
+        ) : null}
+        <Chip label="🎁 Offrir" on={!!line.offered} onPress={() => change({ offered: line.offered ? 0 : 1 })} />
+      </View>
       <View style={styles.lineFoot}>
-        <Text style={styles.lineTotal}>
-          {euros(line.total_ht_cents)} HT{line.surcharge_bp ? ` (majorations +${percent(line.surcharge_bp)})` : ''}
+        <Text style={[styles.lineTotal, !!line.offered && styles.offered]}>
+          {line.offered ? `Offert (valeur ${euros(line.total_ht_cents)} HT)` : `${euros(line.total_ht_cents)} HT`}
+          {line.surcharge_bp ? ` (majorations +${percent(line.surcharge_bp)})` : ''}
         </Text>
         <Pressable onPress={() => removeQuoteLine(quoteId, line.id).catch((e) => onError(String(e)))} accessibilityRole="button" accessibilityLabel={`Retirer la ligne ${line.label}`}>
           <Text style={styles.remove}>Retirer</Text>
@@ -232,4 +253,6 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: Colors.primary },
   chipText: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  gift: { fontSize: 15, color: Colors.primary, fontWeight: '600' },
+  offered: { color: Colors.primary },
 });

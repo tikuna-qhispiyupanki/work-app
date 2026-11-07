@@ -24,7 +24,7 @@ export const storagePath = (companyId: string, photoId: string, thumb = false) =
 export const thumbKey = (photoId: string) => `${photoId}_min`;
 
 type NewPhoto = {
-  ownerType: 'visit' | 'tree' | 'job' | 'message';
+  ownerType: 'visit' | 'tree' | 'job' | 'message' | 'quote';
   ownerId: string;
   kind: PhotoKind;
   image: CompressedImage;

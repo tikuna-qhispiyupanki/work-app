@@ -1,11 +1,12 @@
 import { currentIds } from '@/auth/current';
 import { gridParams, GridRow } from '@/db/prices';
 import type { GridParams } from '@/domain/pricing';
-import { addDays, buildQuoteLines, formatQuoteNumber, isoDay, ItemInput, LineKind, quoteTotals, recomputeLine, TreeInput } from '@/domain/quote-build';
+import { addDays, buildQuoteLines, formatQuoteNumber, isoDay, ItemInput, LineKind, quoteTotals, quoteTotalsFromLines, recomputeLine, TreeInput } from '@/domain/quote-build';
 import { vatRateBp } from '@/domain/quote-calc';
 import type { VatRegime, VatZone } from '@/domain/quote-calc';
 
 import { db, newId, nowIso } from './database';
+import { addPhoto } from './photos';
 
 export type QuoteStatus = 'brouillon' | 'finalise' | 'signe' | 'refuse';
 export type QuoteRow = {
@@ -32,6 +33,7 @@ export type QuoteRow = {
   created_at: string;
   signed_at: string | null;
   signer_name: string | null;
+  signature_photo_id: string | null;
 };
 export type QuoteLineRow = {
   id: string;
@@ -47,6 +49,7 @@ export type QuoteLineRow = {
   urgent: number;
   surcharge_bp: number;
   total_ht_cents: number;
+  offered: number | null;
 };
 export type CompanyRow = {
   id: string;
@@ -111,8 +114,8 @@ export async function createQuoteFromVisit(visitId: string): Promise<string> {
     for (const [i, l] of lines.entries()) {
       await tx.execute(
         `INSERT INTO quote_lines (id, company_id, created_at, updated_at, created_by, quote_id, position, kind, tree_id, price_item_id, label, unit,
-           quantity, unit_price_ht_cents, retention, big_trunk, urgent, surcharge_bp, total_ht_cents)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           quantity, unit_price_ht_cents, retention, big_trunk, urgent, surcharge_bp, total_ht_cents, offered)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
         [newId(), companyId, now, now, userId, id, i, l.kind, l.treeId, l.priceItemId, l.label, l.unit, l.quantity, l.unitPriceCents,
           l.retention ? 1 : 0, l.bigTrunk ? 1 : 0, l.urgent ? 1 : 0, l.surchargeBp, l.totalCents]
       );
@@ -129,12 +132,12 @@ async function assertDraft(quoteId: string) {
 // Recalcule les totaux du devis à partir de ses lignes.
 async function refreshTotals(quoteId: string) {
   const q = await db.get<{ vat_rate_bp: number }>('SELECT vat_rate_bp FROM quotes WHERE id = ?', [quoteId]);
-  const lines = await db.getAll<{ total_ht_cents: number }>('SELECT total_ht_cents FROM quote_lines WHERE quote_id = ? AND deleted_at IS NULL', [quoteId]);
-  const t = quoteTotals(lines.map((l) => l.total_ht_cents), q.vat_rate_bp);
+  const lines = await db.getAll<{ total_ht_cents: number; offered: number | null }>('SELECT total_ht_cents, offered FROM quote_lines WHERE quote_id = ? AND deleted_at IS NULL', [quoteId]);
+  const t = quoteTotalsFromLines(lines, q.vat_rate_bp);
   await db.execute('UPDATE quotes SET subtotal_ht_cents = ?, vat_cents = ?, total_ttc_cents = ?, updated_at = ? WHERE id = ?', [t.htCents, t.vatCents, t.ttcCents, nowIso(), quoteId]);
 }
 
-export type LineChange = Partial<{ label: string; quantity: number; unit_price_ht_cents: number; retention: number; big_trunk: number; urgent: number }>;
+export type LineChange = Partial<{ label: string; quantity: number; unit_price_ht_cents: number; retention: number; big_trunk: number; urgent: number; offered: number }>;
 
 export async function updateQuoteLine(quoteId: string, lineId: string, change: LineChange) {
   await assertDraft(quoteId);
@@ -146,8 +149,8 @@ export async function updateQuoteLine(quoteId: string, lineId: string, change: L
     grid?.params ?? { surchargeRetentionBp: 3000, surchargeBigTrunkBp: 2500, surchargeUrgentBp: 4000 }
   );
   await db.execute(
-    `UPDATE quote_lines SET label = ?, quantity = ?, unit_price_ht_cents = ?, retention = ?, big_trunk = ?, urgent = ?, surcharge_bp = ?, total_ht_cents = ?, updated_at = ? WHERE id = ?`,
-    [next.label, next.quantity, next.unit_price_ht_cents, next.retention, next.big_trunk, next.urgent, r.surchargeBp, r.totalCents, nowIso(), lineId]
+    `UPDATE quote_lines SET label = ?, quantity = ?, unit_price_ht_cents = ?, retention = ?, big_trunk = ?, urgent = ?, offered = ?, surcharge_bp = ?, total_ht_cents = ?, updated_at = ? WHERE id = ?`,
+    [next.label, next.quantity, next.unit_price_ht_cents, next.retention, next.big_trunk, next.urgent, next.offered ? 1 : 0, r.surchargeBp, r.totalCents, nowIso(), lineId]
   );
   await refreshTotals(quoteId);
 }
@@ -159,8 +162,8 @@ export async function addQuoteLine(quoteId: string, kind: 'location' | 'libre') 
   const pos = await db.get<{ p: number | null }>('SELECT MAX(position) AS p FROM quote_lines WHERE quote_id = ?', [quoteId]);
   await db.execute(
     `INSERT INTO quote_lines (id, company_id, created_at, updated_at, created_by, quote_id, position, kind, label, unit, quantity, unit_price_ht_cents,
-       retention, big_trunk, urgent, surcharge_bp, total_ht_cents)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0)`,
+       retention, big_trunk, urgent, surcharge_bp, total_ht_cents, offered)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0, 0)`,
     [newId(), companyId, now, now, userId, quoteId, (pos.p ?? -1) + 1, kind, kind === 'location' ? 'Location de matériel (nacelle, rogneuse…)' : 'Prestation', kind === 'location' ? 'jour' : 'forfait']
   );
 }
@@ -249,4 +252,28 @@ export async function updateCompany(fields: CompanyFields) {
   }
   if (!sets.length) return;
   await db.execute(`UPDATE companies SET ${sets.join(', ')}, updated_at = ? WHERE id = ?`, [...values, nowIso(), companyId]);
+}
+
+// Signature du client : image (photo « signature », uniquement ajoutée), nom, date, position.
+// Fonctionne hors-ligne ; le devis passe à « signé » et ne peut plus changer.
+export async function signQuote(
+  quoteId: string,
+  signerName: string,
+  image: { blob: Blob; width: number; height: number },
+  position: { lat: number; lng: number } | null
+) {
+  const q = await db.get<{ status: string }>('SELECT status FROM quotes WHERE id = ?', [quoteId]);
+  if (q.status !== 'finalise') throw new Error('Seul un devis finalisé (et pas encore signé ni refusé) peut être signé.');
+  if (!signerName.trim()) throw new Error('Indique le nom de la personne qui signe.');
+  const photoId = await addPhoto({ ownerType: 'quote', ownerId: quoteId, kind: 'signature', image, lat: position?.lat, lng: position?.lng });
+  await db.execute(
+    `UPDATE quotes SET status = 'signe', signed_at = ?, signer_name = ?, signature_photo_id = ?, signed_lat = ?, signed_lng = ?, updated_at = ? WHERE id = ?`,
+    [nowIso(), signerName.trim(), photoId, position?.lat ?? null, position?.lng ?? null, nowIso(), quoteId]
+  );
+}
+
+export async function refuseQuote(quoteId: string) {
+  const q = await db.get<{ status: string }>('SELECT status FROM quotes WHERE id = ?', [quoteId]);
+  if (q.status !== 'finalise') throw new Error('Seul un devis finalisé peut être marqué refusé.');
+  await db.execute(`UPDATE quotes SET status = 'refuse', updated_at = ? WHERE id = ?`, [nowIso(), quoteId]);
 }

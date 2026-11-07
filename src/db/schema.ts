@@ -215,6 +215,7 @@ const quote_lines = new Table(
     urgent: column.integer,
     surcharge_bp: column.integer,
     total_ht_cents: column.integer,
+    offered: column.integer, // 1 = ligne offerte (geste commercial), hors total
     note: column.text,
   },
   { indexes: { by_quote: ['quote_id', 'position'] } }

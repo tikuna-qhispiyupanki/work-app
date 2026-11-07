@@ -40,3 +40,10 @@ test('modification d’une ligne et numérotation', () => {
   assert.strictEqual(addDays('2026-11-07', 30), '2026-12-07');
   assert.strictEqual(addDays('2026-12-15', 30), '2027-01-14');
 });
+
+test('ligne offerte : hors total, valeur gardée', () => {
+  const { quoteTotalsFromLines } = require('../../src/domain/quote-build.ts');
+  const lines = [{ total_ht_cents: 100000 }, { total_ht_cents: 30000, offered: 1 }, { total_ht_cents: 4500, offered: 0 }];
+  assert.deepStrictEqual(quoteTotalsFromLines(lines, 0), { htCents: 104500, vatCents: 0, ttcCents: 104500, offeredCents: 30000 });
+  assert.deepStrictEqual(quoteTotalsFromLines(lines, 850), { htCents: 104500, vatCents: 8883, ttcCents: 113383, offeredCents: 30000 });
+});
