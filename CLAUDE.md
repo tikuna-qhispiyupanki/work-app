@@ -31,7 +31,7 @@ Documents de référence :
    - 2b ter. Carnet clients (suggestions pendant la saisie, reprise de l'adresse de la dernière visite, fiche et historique), arbres numérotés et nommés sur la carte (et sur l'image du plan), bouton « Ajouter au calendrier » (.ics) ✅ (validé)
    - 2c-1. Serveur : tables, règles d'accès RLS, 12 tests, audit de sécurité Supabase ✅ (validé)
    - 2c-2. Connexion (e-mail + mot de passe, confirmation par e-mail), création de l'entreprise, « Mon compte » ✅ (validé sur iPhone)
-   - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur) ← **en cours** : envoi vers Supabase OK ; réception bloquée tant que « Use Supabase Auth » n'est pas activé dans PowerSync (Client Auth). Instance : `https://6aeeb4c7e277c04a3d8e7338.powersync.journeyapps.com` (réplication Supabase en place, rôle créé par l'assistant PowerSync). `POWERSYNC_URL` reste vide dans le code publié jusqu'au succès de `bash scripts/e2e.sh sync`.
+   - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur) ← **en cours** : envoi vers Supabase OK ; réception bloquée tant que « Use Supabase Auth » n'est pas activé dans PowerSync (Client Auth). Instance : `https://6aeeb4c94d7433c80999f9fd.powersync.journeyapps.com` (réplication Supabase en place, rôle créé par l'assistant PowerSync). `POWERSYNC_URL` reste vide dans le code publié jusqu'au succès de `bash scripts/e2e.sh sync`.
    - 2d. Photos : compression, miniature, file d'envoi
 3. Grille de prix : import du fichier Excel
 4. Visite et devis
