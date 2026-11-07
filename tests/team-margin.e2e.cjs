@@ -106,7 +106,7 @@ const waitSql = async (q, ok, what) => {
       txt += inflateSync(Buffer.from(m[1], 'latin1')).toString('latin1');
     } catch {}
   }
-  if (/Paul|Marge|marge|28,00/.test(txt)) throw new Error('le PDF du client contient des informations internes');
+  if (/Paul|Léa|Équipe prévue|Marge estimée|€\/h/.test(txt)) throw new Error('le PDF du client contient des informations internes');
   console.log('3. PDF du devis : ni équipe, ni coût, ni marge');
 
   await syncState(p, /Tout est envoyé/);

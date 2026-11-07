@@ -202,6 +202,12 @@ function pdfText(buf) {
   console.log('   textes par défaut sur le serveur :', JSON.stringify(def[0]));
   if (srv[0].chantiers !== 1 || !srv[0].meme_id || srv[0].fiche !== 'signee' || srv[0].equipe !== 2) throw new Error('données serveur incorrectes');
 
+  await p.reload({ waitUntil: 'load' });
+  await vis(p.getByText(/Version 1 signée le .* par Gérant Test/)).waitFor({ timeout: 30000 });
+  await vis(p.getByText('Présentée aux intervenants (2/2)')).waitFor();
+  await p.goto(APP, { waitUntil: 'load' });
+  await vis(p.getByText(/fiche signée/)).waitFor({ timeout: 30000 });
+  console.log('8. après envoi et rechargement : fiche signée et attestations toujours sur le téléphone, chantier dans l\'accueil');
   console.log('Erreurs :', errors.length ? errors : 'aucune');
   await b.close();
 })().catch(async (e) => {
