@@ -25,7 +25,7 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
 
   // 1. Téléphone A : une visite avec un arbre, puis envoi au serveur
   const A = await phone();
-  await A.goto(APP, { waitUntil: 'networkidle' });
+  await A.goto(APP, { waitUntil: 'load' });
   await login(A);
   await A.getByText('+ Nouvelle visite').click();
   await field(A, 'Nom').fill('Mme Sync');
@@ -46,13 +46,13 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
          select gen_random_uuid(), company_id, 'M. Bureau', user_id from memberships where user_id = 'eeeeeeee-0000-4000-8000-00000000e2e0';
        insert into visits (id, company_id, client_id, visited_at, site_city, created_by)
          select gen_random_uuid(), c.company_id, c.id, now(), 'Le Tampon', c.created_by from clients c where c.name = 'M. Bureau'`);
-  await A.goto(APP, { waitUntil: 'networkidle' });
+  await A.goto(APP, { waitUntil: 'load' });
   await vis(A, A.getByText('M. Bureau')).waitFor({ timeout: 45000 });
   console.log('2. visite créée sur le serveur → reçue sur A');
 
   // 3. Téléphone B (nouveau téléphone, même compte) : tout est récupéré
   const B = await phone();
-  await B.goto(APP, { waitUntil: 'networkidle' });
+  await B.goto(APP, { waitUntil: 'load' });
   await login(B);
   await vis(B, B.getByText('Mme Sync')).waitFor({ timeout: 45000 });
   await vis(B, B.getByText('M. Bureau')).waitFor({ timeout: 45000 });
@@ -81,7 +81,7 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
   if (st[0]?.status !== 'faite') throw new Error('statut non envoyé');
 
   // 6. Déconnexion de A : données retirées du téléphone, puis récupérées à la reconnexion
-  await A.goto(APP, { waitUntil: 'networkidle' });
+  await A.goto(APP, { waitUntil: 'load' });
   await allSent(A);
   await vis(A, A.getByLabel('Mon compte')).click();
   await vis(A, A.getByText('Se déconnecter', { exact: true })).click();

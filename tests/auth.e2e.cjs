@@ -19,7 +19,7 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   const field = (label) => vis(p.getByLabel(label, { exact: true }));
 
   // 1. Non connecté → écran de connexion
-  await p.goto(APP, { waitUntil: 'networkidle' });
+  await p.goto(APP, { waitUntil: 'load' });
   await vis(p.getByText('Se connecter', { exact: true })).waitFor({ timeout: 15000 });
   await p.screenshot({ path: 'tests/out-connexion.png' });
   console.log("1. sans compte : l'écran de connexion s'affiche");
@@ -60,14 +60,25 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   console.log('5. visite créée une fois connecté');
 
   // 6. Hors-ligne : l'application s'ouvre directement, sans redemander la connexion
-  await p.goto(APP, { waitUntil: 'networkidle' });
+  await p.goto(APP, { waitUntil: 'load' });
   await p.evaluate(async () => { await navigator.serviceWorker.ready; });
-  await p.reload({ waitUntil: 'networkidle' });
+  await p.reload({ waitUntil: 'load' });
   await ctx.setOffline(true);
   await p.reload();
   await vis(p.getByText('Client test connexion')).waitFor({ timeout: 15000 });
   console.log("6. HORS LIGNE : l'application s'ouvre connectée, avec la visite");
+  // 6 bis. Déconnexion refusée tant qu'une modification n'est pas envoyée (sinon elle serait perdue)
+  await vis(p.getByText('Client test connexion')).click();
+  await vis(p.getByText('✓ Marquer la visite comme faite')).click();
+  await vis(p.getByText('✓ Faite')).waitFor();
+  await p.goBack();
+  await vis(p.getByLabel('Mon compte')).click();
+  await vis(p.getByText('Se déconnecter', { exact: true })).click();
+  await vis(p.getByText(/Déconnexion impossible pour l'instant/)).waitFor({ timeout: 15000 });
+  console.log('6 bis. HORS LIGNE avec une modification en attente : déconnexion refusée (rien de perdu)');
   await ctx.setOffline(false);
+  await vis(p.getByText('✓ Tout est envoyé au serveur.')).waitFor({ timeout: 45000 });
+  await p.goBack();
 
   // 7. Mon compte → déconnexion
   await vis(p.getByLabel('Mon compte')).click();

@@ -31,7 +31,7 @@ Documents de référence :
    - 2b ter. Carnet clients (suggestions pendant la saisie, reprise de l'adresse de la dernière visite, fiche et historique), arbres numérotés et nommés sur la carte (et sur l'image du plan), bouton « Ajouter au calendrier » (.ics) ✅ (validé)
    - 2c-1. Serveur : tables, règles d'accès RLS, 12 tests, audit de sécurité Supabase ✅ (validé)
    - 2c-2. Connexion (e-mail + mot de passe, confirmation par e-mail), création de l'entreprise, « Mon compte » ✅ (validé sur iPhone)
-   - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur) ← **en cours** : envoi vers Supabase OK ; réception bloquée tant que « Use Supabase Auth » n'est pas activé dans PowerSync (Client Auth). Instance : `https://6aeeb4c94d7433c80999f9fd.powersync.journeyapps.com` (réplication Supabase en place, rôle créé par l'assistant PowerSync). `POWERSYNC_URL` reste vide dans le code publié jusqu'au succès de `bash scripts/e2e.sh sync`.
+   - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur) ✅ (à valider sur iPhone) : test à deux téléphones (`bash scripts/e2e.sh sync`) réussi — envoi, réception, modification croisée, hors-ligne puis retour du réseau, déconnexion/reconnexion. Instance Production : `https://6aeeb4c94d7433c80999f9fd.powersync.journeyapps.com` (Client Auth en mode manuel : JWKS `https://qtfhiehlhowbuweykyyu.supabase.co/auth/v1/.well-known/jwks.json`, audience `authenticated`). L'instance Development n'est pas utilisée.
    - 2d. Photos : compression, miniature, file d'envoi
 3. Grille de prix : import du fichier Excel
 4. Visite et devis
@@ -121,7 +121,10 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Écrans gardés par `Stack.Protected` (`src/app/_layout.tsx`) : non connecté → `/connexion` ; connecté sans entreprise → `/entreprise` ; sinon l'application.
 - Entreprise active et utilisateur : `src/auth/session.tsx`, mémorisés sur le téléphone pour s'ouvrir hors-ligne. Toute nouvelle donnée prend `currentIds()` (`src/auth/current.ts`) : jamais d'identifiant d'entreprise écrit en dur.
 - Données créées avant la première connexion (identifiants provisoires `LOCAL_COMPANY_ID` / `LOCAL_USER_ID`) : rattachées à l'entreprise à la connexion. **À l'étape 2c-3, l'envoi au serveur doit aussi remplacer ces identifiants provisoires dans les opérations en attente.**
-- Déconnexion : les données restent sur le téléphone tant que la synchronisation n'est pas branchée (sinon perte de ce qui n'est pas envoyé).
+- Déconnexion : **refusée tant qu'une modification n'est pas envoyée** (sinon elle serait perdue) ; une fois tout envoyé, les données du téléphone sont effacées (`disconnectAndClear`) et reviennent du serveur à la reconnexion.
+- Envoi (`src/sync/connector.ts`) : les identifiants provisoires `LOCAL_COMPANY_ID` / `LOCAL_USER_ID` sont remplacés au moment de l'envoi. Les refus définitifs du serveur (codes 22xxx, 23xxx, 42501) sont mis de côté et affichés dans « Mon compte » au lieu de bloquer la file. Les dates venant du serveur ont un espace au lieu du « T » : toujours les lire avec `toDate()` (`src/domain/dates.ts`).
+- Sous-traitant RGPD à déclarer : **PowerSync** (copie des données synchronisées), en plus de Supabase.
+- Tests : la synchronisation garde une connexion ouverte, donc ne jamais attendre `networkidle` dans Playwright.
 - Tests de bout en bout : `npm run test:e2e` (`scripts/e2e.sh`) crée un compte de test temporaire dans Supabase, lance tous les tests, puis supprime le compte et ses données.
 
 ### Calendrier

@@ -10,12 +10,12 @@ const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
   const p = await ctx.newPage();
   const errors = [];
   p.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
-  p.on('console', (m) => m.type() === 'error' && !/ERR_INTERNET_DISCONNECTED/.test(m.text()) && errors.push('console: ' + m.text())); // hors-ligne : échecs réseau attendus
+  p.on('console', (m) => m.type() === 'error' && !/ERR_INTERNET_DISCONNECTED|Failed to fetch/.test(m.text()) && errors.push('console: ' + m.text())); // hors-ligne : échecs réseau attendus
   const fill = async (label, v) => p.getByLabel(label, { exact: true }).fill(v);
 
-  await p.goto(APP, { waitUntil: 'networkidle' });
+  await p.goto(APP, { waitUntil: 'load' });
   await login(p);
-  await p.getByText(/Tout est enregistré sur le téléphone|en attente d'envoi/).first().waitFor({ timeout: 15000 });
+  await p.getByText(/Tout est|en attente|Envoi en cours|Connexion au serveur/).first().waitFor({ timeout: 15000 });
   console.log('1. base locale prête');
 
   await p.getByText('+ Nouvelle visite').click();
@@ -32,14 +32,14 @@ const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
   await p.screenshot({ path: 'tests/out-visite.png' });
   console.log('2. visite créée, URL', new URL(p.url()).pathname);
 
-  await p.goto(APP, { waitUntil: 'networkidle' });
+  await p.goto(APP, { waitUntil: 'load' });
   await p.getByText('Mme Payet').waitFor();
   console.log('3. après rechargement : visite toujours là');
-  console.log('   bandeau :', await p.getByText(/en attente d'envoi/).innerText());
+  console.log('   bandeau :', await p.getByText(/● En ligne/).first().innerText());
 
   // Attendre que le service worker contrôle la page, puis couper le réseau.
   await p.evaluate(async () => { await navigator.serviceWorker.ready; });
-  await p.reload({ waitUntil: 'networkidle' });
+  await p.reload({ waitUntil: 'load' });
   const controlled = await p.evaluate(() => !!navigator.serviceWorker.controller);
   await ctx.setOffline(true);
   await p.reload();

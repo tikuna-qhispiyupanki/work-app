@@ -23,7 +23,7 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   const field = (label) => vis(p.getByLabel(label, { exact: true }));
 
   // 1. Première visite avec localisation
-  await p.goto(APP, { waitUntil: 'networkidle' });
+  await p.goto(APP, { waitUntil: 'load' });
   await login(p);
   await p.getByText('+ Nouvelle visite').click();
   await field('Nom').fill('Mme Técher');
@@ -53,7 +53,7 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   console.log(`2. deux arbres placés et nommés (${dots} repères sur la carte)`);
 
   // 3. Image du plan avec les arbres
-  await p.waitForLoadState('networkidle');
+  await p.waitForTimeout(1500); // chargement des tuiles de carte (la synchronisation garde une connexion ouverte)
   await vis(p.getByText("📷 Enregistrer l'image du plan avec les arbres")).click();
   await vis(p.getByText('Image du plan enregistrée avec les arbres')).waitFor({ timeout: 20000 });
   const img = vis(p.getByAltText('Plan du chantier'));
@@ -66,7 +66,7 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   await p.screenshot({ path: 'tests/out-visite-arbres.png', fullPage: true });
 
   // 4. Deuxième visite : le client est proposé, l'adresse reprise
-  await p.goto(APP, { waitUntil: 'networkidle' });
+  await p.goto(APP, { waitUntil: 'load' });
   await p.getByText('+ Nouvelle visite').click();
   await field('Nom').fill('téch');
   await vis(p.getByText('Déjà dans le carnet :')).waitFor();
@@ -84,7 +84,7 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   await vis(p.getByText(/📒 Fiche client/)).click();
   await vis(p.getByText('Historique (2 visites)')).waitFor();
   console.log('5. fiche client : historique de 2 visites');
-  await p.goto(APP, { waitUntil: 'networkidle' });
+  await p.goto(APP, { waitUntil: 'load' });
   await p.getByText('📒 Clients').click();
   await field('Rechercher (nom, téléphone, commune)').fill('0692 12');
   await vis(p.getByText('2 visites')).waitFor();

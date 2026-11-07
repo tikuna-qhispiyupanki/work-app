@@ -21,7 +21,7 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   p.on('dialog', (d) => d.accept()); // confirme la suppression
   const fill = (label, v) => p.getByLabel(label, { exact: true }).fill(v);
 
-  await p.goto(APP, { waitUntil: 'networkidle' });
+  await p.goto(APP, { waitUntil: 'load' });
   await login(p);
   await p.getByText('+ Nouvelle visite').click();
   await fill('Nom', 'M. Grondin');
@@ -33,9 +33,9 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   console.log(`1. Me localiser → « ${address}, ${cp} ${city} »`);
   await p.getByText('Zone : La Réunion (8,5 %)').waitFor();
   await p.locator('[aria-label="Carte du chantier"] img').first().waitFor();
-  await p.waitForLoadState('networkidle');
+  await p.waitForTimeout(1500); // chargement des tuiles de carte (la synchronisation garde une connexion ouverte)
   await p.getByText('Plan', { exact: true }).click();
-  await p.waitForLoadState('networkidle');
+  await p.waitForTimeout(1500); // chargement des tuiles de carte (la synchronisation garde une connexion ouverte)
   await p.screenshot({ path: 'tests/out-formulaire-carte.png', fullPage: true });
   console.log('2. carte IGN affichée (plan)');
 
