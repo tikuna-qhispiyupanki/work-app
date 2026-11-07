@@ -1,19 +1,26 @@
 import { useQuery } from '@powersync/react';
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Icon } from '@/components/icon';
 import { QuoteItem, VisitItem } from '@/components/list-items';
 import { Button, Card, Muted } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
+import { JOB_STATUS_LABEL, JobRow } from '@/db/jobs';
 import { QUOTES_LIST_SQL, QuoteListRow, VISITS_SEARCH_SQL, VisitListRow } from '@/db/lists';
 import { toDate } from '@/domain/dates';
 
 const DAY = 86400000;
+const HOME_JOBS_SQL = `SELECT j.*, c.name AS client_name,
+  (SELECT status FROM intervention_sheets s WHERE s.job_id = j.id AND s.deleted_at IS NULL AND s.status <> 'remplacee' ORDER BY version DESC LIMIT 1) AS sheet_status
+  FROM jobs j LEFT JOIN clients c ON c.id = j.client_id
+  WHERE j.deleted_at IS NULL AND j.status NOT IN ('termine', 'annule') ORDER BY j.planned_start IS NULL, j.planned_start, j.created_at`;
 
 // Accueil : la journée, la semaine, les devis à faire signer et les brouillons.
 export default function HomeScreen() {
   const { data: visits, isLoading } = useQuery<VisitListRow>(VISITS_SEARCH_SQL, ['', '', '', '']);
   const { data: quotes } = useQuery<QuoteListRow>(QUOTES_LIST_SQL);
+  const { data: jobs } = useQuery<JobRow & { sheet_status: string | null }>(HOME_JOBS_SQL);
   const start = new Date(new Date().toDateString()).getTime();
   const t = (v: VisitListRow) => toDate(v.visited_at).getTime();
   const today = visits.filter((v) => t(v) >= start && t(v) < start + DAY);
@@ -65,8 +72,22 @@ export default function HomeScreen() {
         </Card>
       ) : null}
 
-      <Card title="Chantiers">
-        <Muted>Les chantiers arrivent à l&apos;étape 5 (fiche d&apos;intervention).</Muted>
+      <Card title={`Chantiers (${jobs.length})`}>
+        {jobs.length === 0 ? <Muted>Un chantier apparaît ici dès qu&apos;un devis est signé.</Muted> : null}
+        {jobs.map((j) => (
+          <Pressable key={j.id} style={styles.job} onPress={() => router.push({ pathname: '/chantiers/[id]', params: { id: j.id } })} accessibilityRole="link" accessibilityLabel={`Chantier ${j.client_name ?? ''}`}>
+            <Icon name="construct-outline" size={22} color={Colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.jobTitle}>{j.client_name || j.title}</Text>
+              <Muted>
+                {JOB_STATUS_LABEL[j.status]}
+                {j.planned_start ? ` · ${toDate(j.planned_start).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}
+                {j.sheet_status === 'signee' ? ' · fiche signée' : ' · fiche à faire'}
+              </Muted>
+            </View>
+            {j.near_power_lines && !j.dt_dict_done_on ? <Icon name="flash-outline" size={20} color={Colors.warning} /> : null}
+          </Pressable>
+        ))}
       </Card>
     </ScrollView>
   );
@@ -82,6 +103,8 @@ function Stat({ n, label, warn }: { n: number; label: string; warn?: boolean }) 
 }
 
 const styles = StyleSheet.create({
+  job: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: 8, borderTopWidth: 1, borderTopColor: Colors.border },
+  jobTitle: { fontSize: 16, fontWeight: '500', color: Colors.text },
   container: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xl },
   date: { fontSize: 18, color: Colors.textSecondary },
   stats: { flexDirection: 'row', gap: Spacing.sm },

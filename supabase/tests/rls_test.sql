@@ -17,6 +17,7 @@ declare
   j_n int;
   q2 uuid := 'aaaaaaaa-5555-4000-8000-00000000000b';
   m_a uuid := 'aaaaaaaa-6666-4000-8000-00000000000a'; -- équipier de A
+  sh uuid := 'aaaaaaaa-7777-4000-8000-00000000000a'; -- fiche d'intervention de A
 begin
   insert into auth.users (id, email, aud, role) values
     (ua, 'test-a@arboject.invalid', 'authenticated', 'authenticated'),
@@ -290,6 +291,54 @@ begin
   exception when others then ok := true;
   end;
   results := results || format(E'\n38. B rattache un équipier de A à ses données : %s', case when ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
+  execute 'reset role';
+
+  -- 39-45. Chantier et fiche d'intervention
+  select count(*) into n from public.jobs where id = q2 and quote_id = q2 and status = 'a_planifier';
+  results := results || format(E'\n39. Chantier créé tout seul à la signature à distance du devis : %s', case when n = 1 then 'OK' else 'ÉCHEC' end);
+  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  insert into public.job_members (id, company_id, job_id, member_id, role_on_job) values (gen_random_uuid(), ca, q2, m_a, 'chef');
+  insert into public.intervention_sheets (id, company_id, job_id, location, works, risks) values (sh, ca, q2, '1 rue du Test', 'Élagage', '{}');
+  begin
+    insert into public.intervention_sheet_acks (id, company_id, sheet_id, member_id, name) values (gen_random_uuid(), ca, sh, m_a, 'Paul');
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n40. Équipier signe une fiche pas encore signée par le chef d''entreprise : %s', case when ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
+  update public.intervention_sheets set status = 'signee', signer_name = 'Gérant A', signed_at = now(), retain_until = current_date + interval '2 years' where id = sh;
+  begin
+    update public.intervention_sheets set works = 'Abattage' where id = sh;
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n41. A modifie une fiche signée : %s', case when ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
+  begin
+    update public.intervention_sheets set deleted_at = now() where id = sh;
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n42. A efface une fiche signée avant 2 ans : %s', case when ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
+  insert into public.intervention_sheet_acks (id, company_id, sheet_id, member_id, name) values (gen_random_uuid(), ca, sh, m_a, 'Paul Grimpeur');
+  update public.intervention_sheet_acks set name = 'Autre' where sheet_id = sh;
+  get diagnostics n = row_count;
+  results := results || format(E'\n43. Équipier atteste la fiche ; l''attestation modifiée ensuite : %s ligne(s) (attendu 0) : %s', n, case when n = 0 then 'OK' else 'ÉCHEC' end);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', json_build_object('sub', ut, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.jobs where company_id = ca;
+  results := results || format(E'\n44. Technicien de A voit %s chantier (attendu 0 avant les comptes équipiers) : %s', n, case when n = 0 then 'OK' else 'ÉCHEC' end);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', json_build_object('sub', ub, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.intervention_sheets where company_id = ca;
+  select count(*) into j_n from public.jobs where company_id = ca;
+  begin
+    insert into public.intervention_sheets (id, company_id, job_id) values (gen_random_uuid(), cb, q2);
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n45. B voit %s chantier / %s fiche de A et crée une fiche sur un chantier de A : %s', j_n, n, case when n = 0 and j_n = 0 and ok then 'refusé → OK' else 'ÉCHEC' end);
   execute 'reset role';
 
   -- 12. Un visiteur non connecté ne voit rien

@@ -83,7 +83,7 @@ export default function QuoteScreen() {
         {draft && q.vat_regime === 'assujetti' ? (
           <View style={styles.row}>
             {(['reunion', 'hexagone'] as const).map((z) => (
-              <Pressable key={z} onPress={() => run(() => setQuoteZone(q.id, z))} style={[styles.choice, q.vat_zone === z && styles.choiceOn]} accessibilityRole="radio" accessibilityState={{ checked: q.vat_zone === z }}>
+              <Pressable key={z} onPress={() => run(() => setQuoteZone(q.id, z))} style={[styles.choice, q.vat_zone === z && styles.choiceOn]} accessibilityRole="radio" aria-checked={q.vat_zone === z}>
                 <Text style={[styles.choiceText, q.vat_zone === z && { color: Colors.primaryText }]}>{z === 'reunion' ? 'Réunion 8,5 %' : 'Hexagone 20 %'}</Text>
               </Pressable>
             ))}
@@ -147,6 +147,7 @@ export default function QuoteScreen() {
       ) : (
         <>
           <QuoteSign quote={q} clientName={clientName} />
+          {q.status === 'signe' ? <Button label="Voir le chantier" icon="construct-outline" onPress={() => router.push({ pathname: '/chantiers/[id]', params: { id: q.id } })} /> : null}
           <SecondaryButton
             label={q.status === 'refuse' ? 'Refaire un devis à partir de celui-ci' : 'Nouveau devis à partir de celui-ci'}
             icon="copy-outline"
@@ -267,7 +268,7 @@ function NotesField({ quoteId, value }: { quoteId: string; value: string }) {
 
 function Chip({ label, on, onPress, icon }: { label: string; on: boolean; onPress: () => void; icon?: IconName }) {
   return (
-    <Pressable onPress={onPress} style={[styles.chip, on && styles.chipOn, icon && { flexDirection: 'row', alignItems: 'center', gap: 4 }]} accessibilityRole="switch" accessibilityState={{ checked: on }} accessibilityLabel={label}>
+    <Pressable onPress={onPress} style={[styles.chip, on && styles.chipOn, icon && { flexDirection: 'row', alignItems: 'center', gap: 4 }]} accessibilityRole="switch" aria-checked={on} accessibilityLabel={label}>
       {icon ? <Icon name={icon} size={15} color={on ? Colors.primaryText : Colors.primary} /> : null}
       <Text style={[styles.chipText, on && { color: Colors.primaryText }]}>{label}</Text>
     </Pressable>

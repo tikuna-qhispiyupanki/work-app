@@ -132,6 +132,8 @@ Le carnet clients et l'historique sont calculés à partir des visites (et plus 
 
 ### Chantier et fiche d'intervention
 
+> **Réalisé (migration 13)** : `jobs` (id = id du devis ; `title`, `site_address`, `site_lat/lng`, `status`, `planned_start/end`, `near_power_lines`, `dt_dict_done_on`, `notes`), `job_members` (`member_id` → `team_members`, `role_on_job` : chef / equipier / sauveteur), `intervention_sheets` (rubriques 1° à 6°, `emergency_contacts`, `status` brouillon / signee / remplacee, `retain_until`) et `intervention_sheet_acks` (`member_id` facultatif, `name`, `signature_photo_id`). Les colonnes ci-dessous (justification des cordes, plan de sauvetage…) restent prévues pour la V1 bis cordistes.
+
 **jobs**, le chantier, créé à la signature du devis :
 - `quote_id`, `client_id`, `visit_id`, copie de l'adresse du chantier ;
 - `planned_start`, `planned_end`, `status` (`a_planifier` | `planifie` | `en_cours` | `termine`) ;

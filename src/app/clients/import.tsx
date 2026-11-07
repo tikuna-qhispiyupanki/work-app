@@ -225,7 +225,7 @@ export default function ClientImportScreen() {
                     onPress={() => choose(loaded.sheets, i)}
                     style={[styles.chip, i === sheetIndex && styles.chipOn]}
                     accessibilityRole="radio"
-                    accessibilityState={{ checked: i === sheetIndex }}
+                    aria-checked={i === sheetIndex}
                   >
                     <Text
                       style={[

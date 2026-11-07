@@ -125,7 +125,7 @@ function TextF({ label, value, onCommit, disabled, keyboard, multiline }: { labe
 
 function Choice({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={[styles.choice, on && styles.choiceOn]} accessibilityRole="radio" accessibilityState={{ checked: on }}>
+    <Pressable onPress={onPress} style={[styles.choice, on && styles.choiceOn]} accessibilityRole="radio" aria-checked={on}>
       <Text style={[styles.choiceText, on && { color: Colors.primaryText }]}>{label}</Text>
     </Pressable>
   );

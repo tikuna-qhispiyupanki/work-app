@@ -1,4 +1,5 @@
 import { currentIds } from '@/auth/current';
+import { createJobForQuote } from '@/db/jobs';
 import { gridParams, GridRow } from '@/db/prices';
 import type { GridParams } from '@/domain/pricing';
 import { addDays, buildQuoteLines, formatQuoteNumber, isoDay, ItemInput, LineKind, quoteTotals, quoteTotalsFromLines, recomputeLine, TreeInput } from '@/domain/quote-build';
@@ -314,10 +315,14 @@ export async function signQuote(
   if (q.status !== 'finalise') throw new Error('Seul un devis finalisé (et pas encore signé ni refusé) peut être signé.');
   if (!signerName.trim()) throw new Error('Indique le nom de la personne qui signe.');
   const photoId = await addPhoto({ ownerType: 'quote', ownerId: quoteId, kind: 'signature', image, lat: position?.lat, lng: position?.lng });
-  await db.execute(
-    `UPDATE quotes SET status = 'signe', signed_at = ?, signer_name = ?, signature_photo_id = ?, signed_lat = ?, signed_lng = ?, updated_at = ? WHERE id = ?`,
-    [nowIso(), signerName.trim(), photoId, position?.lat ?? null, position?.lng ?? null, nowIso(), quoteId]
-  );
+  await db.writeTransaction(async (tx) => {
+    // Le chantier est créé AVANT le passage à « signé » : le serveur le trouve alors déjà et n'en crée pas un second.
+    await createJobForQuote(tx, quoteId);
+    await tx.execute(
+      `UPDATE quotes SET status = 'signe', signed_at = ?, signer_name = ?, signature_photo_id = ?, signed_lat = ?, signed_lng = ?, updated_at = ? WHERE id = ?`,
+      [nowIso(), signerName.trim(), photoId, position?.lat ?? null, position?.lng ?? null, nowIso(), quoteId]
+    );
+  });
 }
 
 export async function refuseQuote(quoteId: string) {

@@ -32,6 +32,10 @@ streams:
       - SELECT * FROM quote_lines WHERE company_id IN mes_entreprises
       - SELECT * FROM quote_sign_requests WHERE company_id IN mes_entreprises
       - SELECT * FROM quote_crew WHERE company_id IN mes_entreprises
+      - SELECT * FROM jobs WHERE company_id IN mes_entreprises
+      - SELECT * FROM job_members WHERE company_id IN mes_entreprises
+      - SELECT * FROM intervention_sheets WHERE company_id IN mes_entreprises
+      - SELECT * FROM intervention_sheet_acks WHERE company_id IN mes_entreprises
 
   # Mon équipe (noms et métiers) : tous les membres de l'entreprise, techniciens compris.
   equipe:

@@ -190,7 +190,7 @@ export default function SignerScreen() {
 
       {info.state === 'a_signer' && !refusing ? (
         <Card title="Bon pour accord">
-          <Pressable style={styles.check} onPress={() => setAgree(!agree)} accessibilityRole="checkbox" accessibilityState={{ checked: agree }} accessibilityLabel="J’ai lu et j’accepte ce devis">
+          <Pressable style={styles.check} onPress={() => setAgree(!agree)} accessibilityRole="checkbox" aria-checked={agree} accessibilityLabel="J’ai lu et j’accepte ce devis">
             <Icon name={agree ? 'checkbox' : 'square-outline'} size={26} color={Colors.primary} />
             <Text style={[styles.text, { flex: 1 }]}>
               J&apos;ai lu et j&apos;accepte ce devis ({euros(d.total_ttc_cents)} {franchise ? 'net à payer' : 'TTC'}) et ses conditions : « Bon pour accord ».

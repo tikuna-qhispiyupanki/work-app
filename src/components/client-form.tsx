@@ -29,7 +29,7 @@ export function ClientForm({ initial, submitLabel, onSubmit }: { initial: Client
       <Card title="Type de client">
         <View style={styles.row}>
           {(['particulier', 'professionnel'] as ClientKind[]).map((k) => (
-            <Pressable key={k} onPress={() => setF((x) => ({ ...x, kind: k }))} style={[styles.choice, f.kind === k && styles.choiceOn]} accessibilityRole="radio" accessibilityState={{ checked: f.kind === k }}>
+            <Pressable key={k} onPress={() => setF((x) => ({ ...x, kind: k }))} style={[styles.choice, f.kind === k && styles.choiceOn]} accessibilityRole="radio" aria-checked={f.kind === k}>
               <Text style={[styles.choiceText, f.kind === k && { color: Colors.primaryText }]}>{k === 'particulier' ? 'Particulier' : 'Professionnel'}</Text>
             </Pressable>
           ))}

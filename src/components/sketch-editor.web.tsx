@@ -130,14 +130,14 @@ export function SketchEditor({ background, ref }: { background: Blob | null; ref
             onPress={() => setColor(c.value)}
             accessibilityRole="radio"
             accessibilityLabel={`Couleur ${c.name}`}
-            accessibilityState={{ checked: color === c.value }}
+            aria-checked={color === c.value}
             style={[styles.color, { backgroundColor: c.value }, color === c.value && styles.colorOn]}
           />
         ))}
       </View>
       <View style={styles.row}>
         {WIDTHS.map((w) => (
-          <Pressable key={w.value} onPress={() => setWidth(w.value)} accessibilityRole="radio" accessibilityState={{ checked: width === w.value }} style={[styles.tool, width === w.value && styles.toolOn]}>
+          <Pressable key={w.value} onPress={() => setWidth(w.value)} accessibilityRole="radio" aria-checked={width === w.value} style={[styles.tool, width === w.value && styles.toolOn]}>
             <Text style={[styles.toolText, width === w.value && { color: Colors.primaryText }]}>{w.name}</Text>
           </Pressable>
         ))}

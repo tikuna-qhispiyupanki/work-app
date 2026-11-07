@@ -10,7 +10,7 @@ export function Segmented<T extends string>({ items, value, onChange }: { items:
       {items.map((it) => {
         const on = it.key === value;
         return (
-          <Pressable key={it.key} onPress={() => onChange(it.key)} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={it.label} style={[styles.tab, on && styles.tabOn]}>
+          <Pressable key={it.key} onPress={() => onChange(it.key)} accessibilityRole="tab" aria-selected={on} accessibilityLabel={it.label} style={[styles.tab, on && styles.tabOn]}>
             <Text style={[styles.text, on && styles.textOn]} numberOfLines={1}>
               {it.label}
             </Text>

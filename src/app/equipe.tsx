@@ -87,7 +87,7 @@ function TradeChips({ value, onChange }: { value: Trade; onChange: (t: Trade) =>
   return (
     <View style={styles.chips}>
       {TRADES.map((t) => (
-        <Pressable key={t} onPress={() => onChange(t)} style={[styles.chip, value === t && styles.chipOn]} accessibilityRole="radio" accessibilityState={{ checked: value === t }}>
+        <Pressable key={t} onPress={() => onChange(t)} style={[styles.chip, value === t && styles.chipOn]} accessibilityRole="radio" aria-checked={value === t}>
           <Text style={[styles.chipText, value === t && { color: Colors.primaryText }]}>{TRADE_LABEL[t]}</Text>
         </Pressable>
       ))}
