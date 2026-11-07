@@ -341,6 +341,54 @@ begin
   results := results || format(E'\n45. B voit %s chantier / %s fiche de A et crée une fiche sur un chantier de A : %s', j_n, n, case when n = 0 and j_n = 0 and ok then 'refusé → OK' else 'ÉCHEC' end);
   execute 'reset role';
 
+  -- 46-51. Fil du chantier, rapport client, lien du client
+  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  insert into public.job_notes (id, company_id, job_id, body) values (gen_random_uuid(), ca, q2, 'Portail fermé à clé');
+  update public.job_notes set body = 'Modifié' where job_id = q2;
+  get diagnostics n = row_count;
+  results := results || format(E'\n46. A ajoute une note au fil du chantier ; la note modifiée ensuite : %s ligne(s) (attendu 0) : %s', n, case when n = 0 then 'OK' else 'ÉCHEC' end);
+  insert into public.job_reports (id, company_id, job_id, works_done) values (q2, ca, q2, 'Élagage réalisé');
+  update public.job_reports set status = 'signe', client_signer_name = 'Client A', client_signed_at = now() where id = q2;
+  begin
+    update public.job_reports set works_done = 'Autre chose' where id = q2;
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n47. A modifie un rapport réceptionné par le client : %s', case when ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
+  insert into public.report_links (id, company_id, job_id, token, expires_at, photos)
+  values (gen_random_uuid(), ca, q2, 'rap_' || repeat('r', 44), now() + interval '30 days', '[{"url":"https://exemple.invalid/a.jpg","stage":"apres"}]');
+  begin
+    insert into public.report_links (id, company_id, job_id, token, expires_at) values (gen_random_uuid(), ca, q2, 'rap_' || repeat('s', 44), now() + interval '400 days');
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n48. A crée un lien de rapport valable plus de 60 jours : %s', case when ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', '', true);
+  execute 'set local role anon';
+  j := public.report_for_client('rap_' || repeat('r', 44));
+  begin
+    perform public.report_for_client('rap_' || repeat('z', 44));
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n49. Client avec le lien : rapport « %s », %s photo ; lien inventé refusé : %s', j #>> '{report,works_done}', jsonb_array_length(j -> 'photos'),
+    case when ok and j ->> 'state' = 'ok' and j #>> '{report,client_signer_name}' = 'Client A' then 'OK' else 'ÉCHEC' end);
+  begin
+    select count(*) into n from public.job_reports;
+    ok := (n = 0);
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n50. Visiteur non connecté lit les rapports et notes : %s', case when ok then 'aucun accès → OK' else 'ÉCHEC' end);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', json_build_object('sub', ub, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.job_notes where company_id = ca;
+  select count(*) into j_n from public.report_links where company_id = ca;
+  results := results || format(E'\n51. B voit %s note / %s lien de rapport de A (attendu 0) : %s', n, j_n, case when n = 0 and j_n = 0 then 'OK' else 'ÉCHEC' end);
+  execute 'reset role';
+
   -- 12. Un visiteur non connecté ne voit rien
   perform set_config('request.jwt.claims', '', true);
   execute 'set local role anon';

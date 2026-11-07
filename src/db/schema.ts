@@ -95,6 +95,7 @@ const photos = new Table(
     lng: column.real,
     caption: column.text,
     include_in_report: column.integer,
+    stage: column.text, // 'avant' | 'pendant' | 'apres' (photos de chantier)
   },
   { indexes: { by_owner: ['owner_type', 'owner_id'] } }
 );
@@ -292,6 +293,31 @@ const intervention_sheet_acks = new Table(
   { indexes: { by_sheet: ['sheet_id'] } }
 );
 
+// Fil du chantier (notes, uniquement ajoutées), rapport de fin de chantier, lien privé du client.
+const job_notes = new Table({ ...common, job_id: column.text, author_name: column.text, body: column.text }, { indexes: { by_job: ['job_id'] } });
+
+const job_reports = new Table(
+  {
+    ...common,
+    job_id: column.text,
+    status: column.text, // 'brouillon' | 'signe'
+    works_done: column.text,
+    remarks: column.text,
+    advice: column.text,
+    finished_on: column.text,
+    client_signer_name: column.text,
+    client_signed_at: column.text,
+    client_signature_photo_id: column.text,
+    client_reserves: column.text,
+  },
+  { indexes: { by_job: ['job_id'] } }
+);
+
+const report_links = new Table(
+  { ...common, job_id: column.text, token: column.text, expires_at: column.text, photos: column.text, opened_at: column.text },
+  { indexes: { by_job: ['job_id'] } }
+);
+
 // Demandes de signature à distance (lien personnel envoyé au client). La réponse du client
 // (nom, date, IP, empreinte, image de signature) n'est écrite que par le serveur.
 const quote_sign_requests = new Table(
@@ -383,7 +409,7 @@ const upload_queue = new Table(
 
 export const AppSchema = new Schema({
   clients, visits, trees, photos, companies, memberships, profiles, price_grids, price_items, quotes, quote_lines, quote_sign_requests, team_members, team_member_costs, quote_crew,
-  jobs, job_members, intervention_sheets, intervention_sheet_acks,
+  jobs, job_members, intervention_sheets, intervention_sheet_acks, job_notes, job_reports, report_links,
   quote_number_pool, upload_queue,
 });
 

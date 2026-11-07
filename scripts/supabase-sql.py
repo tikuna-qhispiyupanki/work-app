@@ -7,6 +7,6 @@ req = urllib.request.Request(f'https://api.supabase.com/v1/projects/{ref}/databa
     data=json.dumps({'query': sql}).encode(), headers={'Content-Type': 'application/json'}, method='POST')
 try:
     with urllib.request.urlopen(req, timeout=120) as r:
-        print(r.status, r.read().decode()[:3000])
+        print(r.status, r.read().decode()[:20000])
 except urllib.error.HTTPError as e:
-    print(e.code, e.read().decode()[:3000])
+    print(e.code, e.read().decode()[:20000])

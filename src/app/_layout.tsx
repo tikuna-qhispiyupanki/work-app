@@ -11,8 +11,8 @@ import { db, requestPersistentStorage } from '@/db/database';
 import { registerServiceWorker } from '@/pwa/register';
 import { hideSplash } from '@/pwa/splash';
 
-// Page publique de signature (lien envoyé au client) : ni base locale, ni compte, ni installation.
-const PUBLIC_PAGE = typeof window !== 'undefined' && /\/signer\/[^/]+\/?$/.test(window.location.pathname);
+// Pages publiques (liens envoyés au client : signature du devis, rapport de chantier) : ni base locale, ni compte, ni installation.
+const PUBLIC_PAGE = typeof window !== 'undefined' && /\/(signer|rapport)\/[^/]+\/?$/.test(window.location.pathname);
 
 export default function RootLayout() {
   if (PUBLIC_PAGE) return <PublicLayout />;
@@ -105,6 +105,7 @@ function AppStack() {
         </Stack.Protected>
         <Stack.Screen name="mot-de-passe" options={{ title: 'Nouveau mot de passe' }} />
         <Stack.Screen name="signer/[token]" options={{ headerShown: false }} />
+        <Stack.Screen name="rapport/[token]" options={{ headerShown: false }} />
       </Stack>
     </>
   );

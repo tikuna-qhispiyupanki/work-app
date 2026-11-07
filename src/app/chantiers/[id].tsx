@@ -7,6 +7,8 @@ import { useAuth } from '@/auth/session';
 import { DateField } from '@/components/date-field';
 import { EmergencyCard } from '@/components/emergency-card';
 import { Icon } from '@/components/icon';
+import { JobFeed } from '@/components/job-feed';
+import { JobReport } from '@/components/job-report';
 import { Segmented } from '@/components/segmented';
 import { Button, Card, Field, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
@@ -19,7 +21,7 @@ import { TEAM_SQL, TeamMemberRow } from '@/db/team';
 import { toDate } from '@/domain/dates';
 import { RESPONSIBILITY } from '@/domain/intervention';
 
-type Tab = 'infos' | 'equipe' | 'fiche';
+type Tab = 'infos' | 'equipe' | 'fiche' | 'fil' | 'rapport';
 const STATUSES: JobStatus[] = ['a_planifier', 'planifie', 'en_cours', 'termine', 'annule'];
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -27,7 +29,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 export default function JobScreen() {
   const { id, onglet } = useLocalSearchParams<{ id: string; onglet?: Tab }>();
   const [tab, setTab] = useState<Tab>(onglet ?? 'infos');
-  const { company } = useAuth();
+  const { company, session } = useAuth();
   const { data, isLoading } = useQuery<JobRow>(JOB_SQL, [id]);
   const { data: team } = useQuery<JobMemberRow>(JOB_TEAM_SQL, [id]);
   const { data: sheets } = useQuery<SheetRow>(JOB_SHEETS_SQL, [id]);
@@ -59,6 +61,8 @@ export default function JobScreen() {
           { key: 'infos', label: 'Infos' },
           { key: 'equipe', label: 'Équipe', count: team.length },
           { key: 'fiche', label: 'Fiche' },
+          { key: 'fil', label: 'Fil' },
+          { key: 'rapport', label: 'Rapport' },
         ]}
       />
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -185,6 +189,8 @@ export default function JobScreen() {
             <Muted>{RESPONSIBILITY}</Muted>
           </>
         ) : null}
+        {tab === 'fil' ? <JobFeed jobId={j.id} author={session?.user.email ?? null} /> : null}
+        {tab === 'rapport' ? <JobReport jobId={j.id} clientName={j.client_name ?? null} clientPhone={null} companyName={company?.name ?? null} /> : null}
       </ScrollView>
     </>
   );

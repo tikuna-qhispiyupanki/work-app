@@ -33,6 +33,7 @@ type NewPhoto = {
   lng?: number | null;
   caption?: string;
   replaceSameKind?: boolean; // ex. une seule image de plan active par visite
+  stage?: 'avant' | 'pendant' | 'apres' | null; // photos de chantier
 };
 
 // Enregistre une photo : fichier + miniature sur le téléphone, ligne en base (synchronisée),
@@ -55,10 +56,10 @@ export async function addPhoto(p: NewPhoto): Promise<string> {
       }
       await tx.execute(
         `INSERT INTO photos (id, company_id, created_at, updated_at, created_by, owner_type, owner_id, kind,
-           mime_type, width, height, bytes, taken_at, lat, lng, caption, include_in_report)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'image/jpeg', ?, ?, ?, ?, ?, ?, ?, 1)`,
+           mime_type, width, height, bytes, taken_at, lat, lng, caption, include_in_report, stage)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'image/jpeg', ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
         [id, companyId, now, now, userId, p.ownerType, p.ownerId, p.kind, p.image.width, p.image.height,
-          p.image.blob.size, now, p.lat ?? null, p.lng ?? null, p.caption ?? null]
+          p.image.blob.size, now, p.lat ?? null, p.lng ?? null, p.caption ?? null, p.stage ?? null]
       );
       await tx.execute('INSERT INTO upload_queue (id, photo_id, attempts, created_at) VALUES (?, ?, 0, ?)', [newId(), id, now]);
     });
