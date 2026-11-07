@@ -24,16 +24,16 @@ Documents de référence :
 ## Feuille de route
 
 1. CLAUDE.md et modèle de données ✅ (validé)
-2. Socle : authentification, entreprises et rôles, synchronisation hors-ligne, photos ← **en cours**
+2. Socle : authentification, entreprises et rôles, synchronisation hors-ligne, photos ✅ (validé)
    - 2a. Squelette Expo (SDK 58) et écran d'accueil ✅ (validé)
    - 2b. Base locale SQLite (PowerSync web), application web installable et hors-ligne, première visite ✅ (validé sur iPhone)
    - 2b bis. Visites : « Me localiser » (GPS + adresse IGN), « Situer l'adresse », carte IGN plan/aérien et image du plan, date planifiée, modifier, supprimer, statut « faite » ✅ (validé)
    - 2b ter. Carnet clients (suggestions pendant la saisie, reprise de l'adresse de la dernière visite, fiche et historique), arbres numérotés et nommés sur la carte (et sur l'image du plan), bouton « Ajouter au calendrier » (.ics) ✅ (validé)
    - 2c-1. Serveur : tables, règles d'accès RLS, 12 tests, audit de sécurité Supabase ✅ (validé)
    - 2c-2. Connexion (e-mail + mot de passe, confirmation par e-mail), création de l'entreprise, « Mon compte » ✅ (validé sur iPhone)
-   - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur) ✅ (à valider sur iPhone) : test à deux téléphones (`bash scripts/e2e.sh sync`) réussi — envoi, réception, modification croisée, hors-ligne puis retour du réseau, déconnexion/reconnexion. Instance Production : `https://6aeeb4c94d7433c80999f9fd.powersync.journeyapps.com` (Client Auth en mode manuel : JWKS `https://qtfhiehlhowbuweykyyu.supabase.co/auth/v1/.well-known/jwks.json`, audience `authenticated`). L'instance Development n'est pas utilisée.
-   - 2d. Photos : compression (1 600 px, JPEG 0,7, sans EXIF), miniature 320 px, option HD 3 200 px, file d'envoi avec reprise, stockage privé par entreprise, téléchargement par lien signé sur un autre appareil ✅ (à valider sur iPhone)
-3. Grille de prix : import du fichier Excel ← **en cours** : tables `price_grids` / `price_items` (migration 4, tests RLS 17-19), lecture du .xlsx (`src/domain/xlsx.ts`, `fflate`), recalcul identique à Excel (`src/domain/pricing.ts`, `grid-import.ts`, tests unitaires sur le vrai fichier), écran « Grille de prix » (Mon compte). Reste : redéploiement des Sync Streams par le fondateur, puis `bash scripts/e2e.sh grid` étape 4 (autre appareil).
+   - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur) ✅ (validé) : test à deux téléphones (`bash scripts/e2e.sh sync`) réussi — envoi, réception, modification croisée, hors-ligne puis retour du réseau, déconnexion/reconnexion. Instance Production : `https://6aeeb4c94d7433c80999f9fd.powersync.journeyapps.com` (Client Auth en mode manuel : JWKS `https://qtfhiehlhowbuweykyyu.supabase.co/auth/v1/.well-known/jwks.json`, audience `authenticated`). L'instance Development a été supprimée, ainsi que son compte d'accès à la base.
+   - 2d. Photos : compression (1 600 px, JPEG 0,7, sans EXIF), miniature 320 px, option HD 3 200 px, file d'envoi avec reprise, stockage privé par entreprise, téléchargement par lien signé sur un autre appareil ✅ (validé)
+3. Grille de prix : import du fichier Excel ✅ (à valider sur iPhone) : tables `price_grids` / `price_items` (migration 4, tests RLS 17-19), lecture du .xlsx (`src/domain/xlsx.ts`, `fflate`), recalcul identique à Excel (`src/domain/pricing.ts`, `grid-import.ts`, tests unitaires sur le vrai fichier), écran « Grille de prix » (Mon compte), synchronisée entre appareils (`bash scripts/e2e.sh grid`).
 4. Visite et devis
 5. Fiche d'intervention et chantier
 6. Fil du chantier et rapport client
