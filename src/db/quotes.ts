@@ -53,6 +53,7 @@ export type QuoteLineRow = {
 };
 export type CompanyRow = {
   id: string;
+  logo_photo_id: string | null;
   name: string | null;
   legal_form: string | null;
   siret: string | null;
@@ -223,6 +224,7 @@ export async function finalizeQuote(quoteId: string): Promise<string> {
     number = formatQuoteNumber(year, n.number);
     await tx.execute('DELETE FROM quote_number_pool WHERE id = ?', [n.id]);
     const snapshot = {
+      logo_photo_id: company!.logo_photo_id,
       name: company!.name, legal_form: company!.legal_form, siret: company!.siret, address: company!.address, postal_code: company!.postal_code,
       city: company!.city, phone: company!.phone, email: company!.email, insurance_name: company!.insurance_name,
       insurance_policy: company!.insurance_policy, insurance_area: company!.insurance_area, vat_regime: q.vat_regime,
@@ -238,7 +240,7 @@ export async function finalizeQuote(quoteId: string): Promise<string> {
 // Fiche entreprise (modifiable par le gérant).
 export type CompanyFields = Partial<Omit<CompanyRow, 'id'>>;
 const COMPANY_EDITABLE = new Set([
-  'name', 'legal_form', 'siret', 'address', 'postal_code', 'city', 'phone', 'email', 'insurance_name', 'insurance_policy', 'insurance_area',
+  'logo_photo_id', 'name', 'legal_form', 'siret', 'address', 'postal_code', 'city', 'phone', 'email', 'insurance_name', 'insurance_policy', 'insurance_area',
   'vat_regime', 'default_vat_zone', 'quote_validity_days', 'quote_payment_terms', 'quote_deposit_bp',
 ]);
 export async function updateCompany(fields: CompanyFields) {
@@ -276,4 +278,13 @@ export async function refuseQuote(quoteId: string) {
   const q = await db.get<{ status: string }>('SELECT status FROM quotes WHERE id = ?', [quoteId]);
   if (q.status !== 'finalise') throw new Error('Seul un devis finalisé peut être marqué refusé.');
   await db.execute(`UPDATE quotes SET status = 'refuse', updated_at = ? WHERE id = ?`, [nowIso(), quoteId]);
+}
+
+// Logo de l'entreprise : image compressée (800 px, fond blanc), gardée comme photo « logo ».
+export async function setCompanyLogo(file: Blob) {
+  const { compressImage } = await import('@/files/image');
+  const { companyId } = currentIds();
+  const image = await compressImage(file, 800, 0.9, '#FFFFFF');
+  const photoId = await addPhoto({ ownerType: 'company', ownerId: companyId, kind: 'logo', image, replaceSameKind: true });
+  await updateCompany({ logo_photo_id: photoId });
 }

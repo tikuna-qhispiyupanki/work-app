@@ -19,7 +19,15 @@ export async function quotePdf(quoteId: string): Promise<{ data: ArrayBuffer; fi
     const blob = (await readFile(q.signature_photo_id)) ?? (await fetchRemotePhoto(storagePath(q.company_id, q.signature_photo_id), q.signature_photo_id));
     if (blob) signatureJpeg = new Uint8Array(await blob.arrayBuffer());
   }
-  const data = buildQuotePdf({ quote: q, lines, company, client, signatureJpeg });
+  // Logo : celui figé dans le devis finalisé, sinon le logo actuel de l'entreprise.
+  let logo: { jpeg: Uint8Array; width: number; height: number } | null = null;
+  const logoId = (company as { logo_photo_id?: string | null }).logo_photo_id;
+  if (logoId) {
+    const meta = await db.getOptional<{ width: number; height: number }>('SELECT width, height FROM photos WHERE id = ?', [logoId]);
+    const blob = (await readFile(logoId)) ?? (await fetchRemotePhoto(storagePath(q.company_id, logoId), logoId));
+    if (blob && meta) logo = { jpeg: new Uint8Array(await blob.arrayBuffer()), width: meta.width, height: meta.height };
+  }
+  const data = buildQuotePdf({ quote: q, lines, company, client, signatureJpeg, logo });
   const who = (client.name ?? 'client').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '');
   return { data, fileName: `Devis-${q.number ?? 'brouillon'}-${who}.pdf` };
 }

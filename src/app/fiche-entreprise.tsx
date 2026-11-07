@@ -3,10 +3,13 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useAuth } from '@/auth/session';
+import { FileButton } from '@/components/file-button';
+import { LocalImage } from '@/components/local-image';
 import { NumberField } from '@/components/number-field';
 import { Card, Field, Muted } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
-import { COMPANY_SQL, CompanyFields, CompanyRow, missingCompanyFields, updateCompany } from '@/db/quotes';
+import { COMPANY_SQL, CompanyFields, CompanyRow, missingCompanyFields, setCompanyLogo, updateCompany } from '@/db/quotes';
+import { kickUploader } from '@/sync/uploader';
 import { FRANCHISE_MENTION } from '@/domain/quote-build';
 
 // Fiche entreprise : identité de l'émetteur des devis. Modifiable par le gérant.
@@ -14,6 +17,7 @@ export default function CompanySheetScreen() {
   const { company: active } = useAuth();
   const { data, isLoading } = useQuery<CompanyRow>(COMPANY_SQL, [active?.id ?? '']);
   const c = data[0];
+  const logo = useLogo(c?.logo_photo_id ?? null); // avant tout « return » : règle des hooks React
   const canEdit = active?.role === 'gerant';
   if (isLoading) return <Muted>Chargement…</Muted>;
   if (!c) return <Muted>Entreprise introuvable.</Muted>;
@@ -28,6 +32,25 @@ export default function CompanySheetScreen() {
         <Text style={styles.ok}>✓ Fiche suffisante pour émettre des devis.</Text>
       )}
       {!canEdit ? <Muted>Lecture seule : seul le gérant modifie la fiche entreprise.</Muted> : null}
+      <Card title="Logo (en haut des devis)">
+        {c.logo_photo_id && logo ? (
+          <View style={{ width: 180 }}>
+            <LocalImage fileId={c.logo_photo_id} alt="Logo de l'entreprise" aspectRatio={logo.width / logo.height} companyId={c.id} uploaded={!!logo.storage_path} />
+          </View>
+        ) : (
+          <Muted>Aucun logo. Sans logo, le nom de l&apos;entreprise sert de titre.</Muted>
+        )}
+        {canEdit ? (
+          <FileButton
+            label={c.logo_photo_id ? '🖼 Changer le logo' : '🖼 Choisir le logo'}
+            accept="image/*"
+            onFile={async (f) => {
+              await setCompanyLogo(f);
+              kickUploader();
+            }}
+          />
+        ) : null}
+      </Card>
       <Card title="Identité (affichée sur les devis)">
         <TextF label="Nom de l'entreprise *" value={c.name} onCommit={(v) => save({ name: v })} disabled={!canEdit} />
         <TextF label="Forme juridique (ex. EI, micro-entreprise, SARL)" value={c.legal_form} onCommit={(v) => save({ legal_form: v })} disabled={!canEdit} />
@@ -77,6 +100,11 @@ export default function CompanySheetScreen() {
       </Card>
     </ScrollView>
   );
+}
+
+function useLogo(id: string | null) {
+  const { data } = useQuery<{ width: number; height: number; storage_path: string | null }>('SELECT width, height, storage_path FROM photos WHERE id = ?', [id ?? '']);
+  return data[0];
 }
 
 function TextF({ label, value, onCommit, disabled, keyboard, multiline }: { label: string; value: string | null; onCommit: (v: string) => void; disabled?: boolean; keyboard?: 'number-pad' | 'phone-pad' | 'email-address'; multiline?: boolean }) {

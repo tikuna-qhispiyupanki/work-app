@@ -101,6 +101,7 @@ const photos = new Table(
 
 // Reçues du serveur uniquement (jamais modifiées sur le téléphone).
 const companies = new Table({
+  logo_photo_id: column.text,
   name: column.text,
   legal_form: column.text,
   insurance_name: column.text,
@@ -222,7 +223,7 @@ const quote_lines = new Table(
 );
 
 // Numéros de devis réservés sur le serveur, utilisables hors-ligne (seulement sur ce téléphone).
-const quote_number_pool = new Table({ company_id: column.text, year: column.integer, number: column.integer }, { localOnly: true });
+const quote_number_pool = new Table({ company_id: column.text, year: column.integer, number: column.integer, epoch: column.integer }, { localOnly: true });
 
 // File d'envoi des fichiers photo (seulement sur ce téléphone, jamais synchronisée).
 const upload_queue = new Table(

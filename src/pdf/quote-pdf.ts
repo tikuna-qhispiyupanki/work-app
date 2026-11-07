@@ -20,6 +20,7 @@ export type QuotePdfInput = {
   company: PdfCompany;
   client: PdfClient;
   signatureJpeg?: Uint8Array | null; // image de la signature du client, si signé
+  logo?: { jpeg: Uint8Array; width: number; height: number } | null; // logo de l'entreprise
 };
 
 const FRANCHISE = 'TVA non applicable, art. 293 B du CGI';
@@ -70,9 +71,16 @@ export function buildQuotePdf(input: QuotePdfInput): ArrayBuffer {
     }
   };
 
-  // En-tête : émetteur à gauche, « DEVIS » à droite
+  // En-tête : logo et émetteur à gauche, « DEVIS » à droite
+  if (input.logo) {
+    // Logo dans un cadre de 45 × 22 mm maximum, proportions gardées.
+    const ratio = input.logo.width / input.logo.height;
+    const h = Math.min(22, 45 / ratio);
+    doc.addImage(input.logo.jpeg, 'JPEG', L, 10, h * ratio, h);
+    y = 10 + h + 6;
+  }
   text(c.name ?? '', L, y, { size: 15, bold: true, color: GREEN });
-  text('DEVIS', R, y, { size: 22, bold: true, color: GREEN, align: 'right' });
+  text('DEVIS', R, input.logo ? 18 : y, { size: 22, bold: true, color: GREEN, align: 'right' });
   y += 6;
   const issuer = [
     c.legal_form,

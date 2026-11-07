@@ -54,6 +54,17 @@ let page;
   await field('SIRET').fill('123 456 789 00011');
   await blur();
   await vis(p.getByText('✓ Fiche suffisante pour émettre des devis.')).waitFor();
+  await p.locator('input[aria-label="🖼 Choisir le logo"]').setInputFiles(path.join(__dirname, 'fixtures', 'logo-transparent.png'));
+  await vis(p.getByAltText("Logo de l'entreprise")).waitFor({ timeout: 20000 });
+  const corner = await p.evaluate(async () => {
+    const img = [...document.images].find((i) => i.alt === "Logo de l'entreprise");
+    await img.decode();
+    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+    return Array.from(x.getImageData(2, 2, 1, 1).data.slice(0, 3));
+  });
+  console.log(`0. logo choisi (PNG transparent) → coin de l'image : rgb(${corner.join(', ')}) ${corner.every((v) => v > 240) ? '(fond blanc ✓)' : '(PAS BLANC)'}`);
+  if (!corner.every((v) => v > 240)) throw new Error('fond du logo incorrect');
   await p.goBack();
   await vis(p.getByText('💶 Grille de prix')).click();
   const none = vis(p.getByText('Aucune grille de prix'));
@@ -118,8 +129,9 @@ let page;
   const txt = pdfText(fs.readFileSync(file));
   const must = ['DEVIS', `N° ${number}`, 'Devis gratuit', 'SIRET 12345678900011', 'M. Signature', 'TVA non applicable, art. 293 B du CGI', 'Offert', 'Geste commercial', 'Bon pour accord', 'Signé le', 'par Jean Signature'];
   const missing = must.filter((m) => !txt.includes(m));
-  const hasImage = fs.readFileSync(file).toString('latin1').includes('/Subtype /Image');
-  console.log(`3. PDF téléchargé : « ${download.suggestedFilename()} », ${Math.round(fs.statSync(file).size / 1024)} Ko ; mentions ${missing.length ? 'MANQUANTES : ' + missing.join(', ') : 'toutes présentes'} ; image de la signature ${hasImage ? 'présente' : 'ABSENTE'}`);
+  const images = (fs.readFileSync(file).toString('latin1').match(/\/Subtype \/Image/g) || []).length;
+  const hasImage = images >= 2; // logo + signature
+  console.log(`3. PDF téléchargé : « ${download.suggestedFilename()} », ${Math.round(fs.statSync(file).size / 1024)} Ko ; mentions ${missing.length ? 'MANQUANTES : ' + missing.join(', ') : 'toutes présentes'} ; images (logo + signature) : ${images}`);
   if (missing.length || !hasImage) throw new Error('PDF incomplet');
 
   console.log('Erreurs :', errors.length ? errors : 'aucune');

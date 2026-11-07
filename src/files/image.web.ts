@@ -27,7 +27,7 @@ async function decode(source: Blob): Promise<ImageBitmap | HTMLImageElement> {
   }
 }
 
-export async function compressImage(source: Blob, maxSide: number, quality: number): Promise<CompressedImage> {
+export async function compressImage(source: Blob, maxSide: number, quality: number, background?: string): Promise<CompressedImage> {
   const img = await decode(source);
   const w0 = 'naturalWidth' in img ? img.naturalWidth : img.width;
   const h0 = 'naturalHeight' in img ? img.naturalHeight : img.height;
@@ -39,6 +39,11 @@ export async function compressImage(source: Blob, maxSide: number, quality: numb
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error("Traitement de l'image impossible sur ce téléphone.");
+  if (background) {
+    // Fond plein (ex. logo PNG transparent : sinon le JPEG le rendrait noir).
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, width, height);
+  }
   ctx.drawImage(img, 0, 0, width, height);
   if ('close' in img) img.close();
   const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', quality));

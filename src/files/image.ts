@@ -5,7 +5,7 @@ export const PHOTO_HD_MAX = 3200;
 export const THUMB_MAX = 320;
 export const QUALITY = 0.7;
 export const HD_QUALITY = 0.85;
-export async function compressImage(_source: Blob, _maxSide: number, _quality: number): Promise<CompressedImage> {
+export async function compressImage(_source: Blob, _maxSide: number, _quality: number, _background?: string): Promise<CompressedImage> {
   throw new Error('Compression non disponible hors version web pour l’instant.');
 }
 export const makeThumbnail = (source: Blob) => compressImage(source, THUMB_MAX, QUALITY);
