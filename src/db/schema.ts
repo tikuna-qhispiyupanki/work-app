@@ -182,6 +182,8 @@ const team_members = new Table(
     user_id: column.text,
     active: column.integer,
     notes: column.text,
+    aipr_profile: column.text,
+    aipr_valid_until: column.text,
   },
   { indexes: { by_company: ['company_id'] } }
 );
@@ -223,6 +225,10 @@ const jobs = new Table(
     near_power_lines: column.integer,
     dt_dict_done_on: column.text,
     notes: column.text,
+    dt_dict_status: column.text,
+    dt_dict_reference: column.text,
+    dt_dict_sent_on: column.text,
+    road_permit: column.text, // JSON
   },
   { indexes: { by_quote: ['quote_id'] } }
 );
@@ -318,6 +324,24 @@ const report_links = new Table(
   { indexes: { by_job: ['job_id'] } }
 );
 
+// Découvertes fortuites de réseaux (constats, uniquement ajoutés).
+const network_findings = new Table(
+  {
+    ...common,
+    job_id: column.text,
+    found_at: column.text,
+    network_type: column.text,
+    description: column.text,
+    damage: column.text,
+    actions_taken: column.text,
+    operator_contacted: column.text,
+    reporter_name: column.text,
+    lat: column.real,
+    lng: column.real,
+  },
+  { indexes: { by_job: ['job_id'] } }
+);
+
 // Demandes de signature à distance (lien personnel envoyé au client). La réponse du client
 // (nom, date, IP, empreinte, image de signature) n'est écrite que par le serveur.
 const quote_sign_requests = new Table(
@@ -409,7 +433,7 @@ const upload_queue = new Table(
 
 export const AppSchema = new Schema({
   clients, visits, trees, photos, companies, memberships, profiles, price_grids, price_items, quotes, quote_lines, quote_sign_requests, team_members, team_member_costs, quote_crew,
-  jobs, job_members, intervention_sheets, intervention_sheet_acks, job_notes, job_reports, report_links,
+  jobs, job_members, intervention_sheets, intervention_sheet_acks, job_notes, job_reports, report_links, network_findings,
   quote_number_pool, upload_queue,
 });
 

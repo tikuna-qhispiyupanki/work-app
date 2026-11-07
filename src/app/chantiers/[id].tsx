@@ -8,6 +8,7 @@ import { DateField } from '@/components/date-field';
 import { EmergencyCard } from '@/components/emergency-card';
 import { Icon } from '@/components/icon';
 import { JobFeed } from '@/components/job-feed';
+import { NetworkCard } from '@/components/network-card';
 import { JobReport } from '@/components/job-report';
 import { Segmented } from '@/components/segmented';
 import { Button, Card, Field, Muted, SecondaryButton } from '@/components/ui';
@@ -97,22 +98,7 @@ export default function JobScreen() {
                 <DateField label="Fin prévue" value={j.planned_end} onChange={(d) => void updateJob(j.id, { planned_end: d })} />
               </View>
             </Card>
-            <Card title="Lignes électriques">
-              <Pressable style={styles.check} onPress={() => void updateJob(j.id, { near_power_lines: j.near_power_lines ? 0 : 1 })} accessibilityRole="checkbox" aria-checked={!!j.near_power_lines} accessibilityLabel="Lignes électriques à proximité du chantier">
-                <Icon name={j.near_power_lines ? 'checkbox' : 'square-outline'} size={24} color={Colors.primary} />
-                <Text style={styles.text}>Lignes électriques à proximité</Text>
-              </Pressable>
-              {j.near_power_lines ? (
-                j.dt_dict_done_on ? (
-                  <Text style={styles.ok}>DT-DICT faite le {toDate(j.dt_dict_done_on).toLocaleDateString('fr-FR')}.</Text>
-                ) : (
-                  <>
-                    <Text style={styles.warning}>⚠ DT-DICT à faire avant les travaux (déclaration auprès des gestionnaires de réseaux).</Text>
-                    <SecondaryButton label="DT-DICT faite aujourd'hui" icon="checkmark-outline" onPress={() => void updateJob(j.id, { dt_dict_done_on: today() })} />
-                  </>
-                )
-              ) : null}
-            </Card>
+            <NetworkCard job={j} />
             <NotesCard job={j} />
           </>
         ) : null}

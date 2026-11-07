@@ -13,10 +13,12 @@ export type TeamMemberRow = {
   active: number;
   notes: string | null;
   hourly_cost_cents: number | null; // null : pas renseigné (ou pas visible pour ce rôle)
+  aipr_profile: string | null;
+  aipr_valid_until: string | null;
 };
 
 // Équipe de l'entreprise active, avec le coût horaire quand ce téléphone le reçoit (gérant, bureau).
-export const TEAM_SQL = `SELECT m.id, m.name, m.trade, m.phone, m.active, m.notes, c.hourly_cost_cents
+export const TEAM_SQL = `SELECT m.id, m.name, m.trade, m.phone, m.active, m.notes, m.aipr_profile, m.aipr_valid_until, c.hourly_cost_cents
   FROM team_members m LEFT JOIN team_member_costs c ON c.member_id = m.id AND c.deleted_at IS NULL
   WHERE m.company_id = ? AND m.deleted_at IS NULL ORDER BY m.active DESC, m.name COLLATE NOCASE`;
 
@@ -45,7 +47,7 @@ export async function addTeamMember(name: string, trade: Trade, hourlyCostCents:
   return id;
 }
 
-export async function updateTeamMember(id: string, c: Partial<{ name: string; trade: Trade; phone: string; active: number; notes: string }>) {
+export async function updateTeamMember(id: string, c: Partial<{ name: string; trade: Trade; phone: string; active: number; notes: string; aipr_profile: string | null; aipr_valid_until: string | null }>) {
   const keys = Object.keys(c) as (keyof typeof c)[];
   if (!keys.length) return;
   await db.execute(`UPDATE team_members SET ${keys.map((k) => `${k} = ?`).join(', ')}, updated_at = ? WHERE id = ?`, [...keys.map((k) => c[k] ?? null), nowIso(), id]);

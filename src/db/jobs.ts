@@ -16,6 +16,7 @@ export type JobRow = {
   id: string; company_id: string; quote_id: string | null; visit_id: string | null; client_id: string | null; title: string | null;
   site_address: string | null; site_lat: number | null; site_lng: number | null; status: JobStatus; planned_start: string | null;
   planned_end: string | null; near_power_lines: number; dt_dict_done_on: string | null; notes: string | null;
+  dt_dict_status: string | null; dt_dict_reference: string | null; dt_dict_sent_on: string | null; road_permit: string | null;
   quote_number?: string | null; client_name?: string | null;
 };
 
@@ -64,7 +65,7 @@ export async function createJobForQuote(tx: Transaction, quoteId: string) {
   }
 }
 
-export async function updateJob(id: string, c: Partial<Pick<JobRow, 'status' | 'planned_start' | 'planned_end' | 'dt_dict_done_on' | 'notes' | 'near_power_lines'>>) {
+export async function updateJob(id: string, c: Partial<Pick<JobRow, 'status' | 'planned_start' | 'planned_end' | 'dt_dict_done_on' | 'notes' | 'near_power_lines' | 'dt_dict_status' | 'dt_dict_reference' | 'dt_dict_sent_on' | 'road_permit'>>) {
   const keys = Object.keys(c) as (keyof typeof c)[];
   if (!keys.length) return;
   await db.execute(`UPDATE jobs SET ${keys.map((k) => `${k} = ?`).join(', ')}, updated_at = ? WHERE id = ?`, [...keys.map((k) => c[k] ?? null), nowIso(), id]);

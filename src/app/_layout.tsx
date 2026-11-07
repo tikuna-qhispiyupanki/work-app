@@ -91,6 +91,8 @@ function AppStack() {
           <Stack.Screen name="grille" options={{ title: 'Grille de prix' }} />
           <Stack.Screen name="equipe" options={{ title: 'Mon équipe' }} />
           <Stack.Screen name="chantiers/[id]" options={{ title: 'Chantier' }} />
+          <Stack.Screen name="chantiers/decouverte" options={{ title: "Découverte d'un réseau" }} />
+          <Stack.Screen name="chantiers/voirie" options={{ title: 'Arrêté de voirie' }} />
           <Stack.Screen name="fiches/[id]" options={{ title: "Fiche d'intervention" }} />
           <Stack.Screen name="arbres/[id]" options={{ title: 'Fiche arbre' }} />
           <Stack.Screen name="devis/[id]" options={{ title: 'Devis' }} />

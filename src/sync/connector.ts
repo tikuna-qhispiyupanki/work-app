@@ -7,7 +7,7 @@ import { LOCAL_COMPANY_ID, LOCAL_USER_ID } from '@/db/database';
 
 // Tables que le téléphone a le droit d'envoyer. Les autres (entreprises, membres, profils)
 // sont seulement reçues du serveur.
-const UPLOADABLE = new Set(['clients', 'visits', 'trees', 'photos', 'price_grids', 'price_items', 'quotes', 'quote_lines', 'quote_sign_requests', 'team_members', 'team_member_costs', 'quote_crew', 'jobs', 'job_members', 'intervention_sheets', 'intervention_sheet_acks', 'job_notes', 'job_reports', 'report_links', 'companies']);
+const UPLOADABLE = new Set(['clients', 'visits', 'trees', 'photos', 'price_grids', 'price_items', 'quotes', 'quote_lines', 'quote_sign_requests', 'team_members', 'team_member_costs', 'quote_crew', 'jobs', 'job_members', 'intervention_sheets', 'intervention_sheet_acks', 'job_notes', 'job_reports', 'report_links', 'network_findings', 'companies']);
 // Tables qu'on modifie seulement (jamais créées depuis le téléphone).
 const UPDATE_ONLY = new Set(['companies']);
 

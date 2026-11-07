@@ -389,6 +389,23 @@ begin
   results := results || format(E'\n51. B voit %s note / %s lien de rapport de A (attendu 0) : %s', n, j_n, case when n = 0 and j_n = 0 then 'OK' else 'ÉCHEC' end);
   execute 'reset role';
 
+  -- 52-54. Découverte fortuite de réseau, AIPR
+  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  insert into public.network_findings (id, company_id, job_id, network_type, description) values (gen_random_uuid(), ca, q2, 'gaz', 'Conduite jaune à 40 cm');
+  update public.network_findings set description = 'Modifié' where job_id = q2;
+  get diagnostics n = row_count;
+  results := results || format(E'\n52. A enregistre une découverte de réseau ; modifiée ensuite : %s ligne(s) (attendu 0) : %s', n, case when n = 0 then 'OK' else 'ÉCHEC' end);
+  update public.team_members set aipr_profile = 'encadrant', aipr_valid_until = current_date + 365 where id = m_a;
+  select count(*) into n from public.team_members where id = m_a and aipr_profile = 'encadrant';
+  results := results || format(E'\n53. Gérant de A note l''AIPR d''un équipier : %s', case when n = 1 then 'OK' else 'ÉCHEC' end);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', json_build_object('sub', ub, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.network_findings where company_id = ca;
+  results := results || format(E'\n54. B voit %s découverte de réseau de A (attendu 0) : %s', n, case when n = 0 then 'OK' else 'ÉCHEC' end);
+  execute 'reset role';
+
   -- 12. Un visiteur non connecté ne voit rien
   perform set_config('request.jwt.claims', '', true);
   execute 'set local role anon';

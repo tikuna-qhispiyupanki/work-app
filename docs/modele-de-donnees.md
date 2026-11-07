@@ -159,6 +159,13 @@ Une fiche signée n'est plus modifiable. Pour corriger, on crée une nouvelle ve
 
 **intervention_sheet_acks** (uniquement ajoutée) : `sheet_id`, `user_id`, `acknowledged_at`, `signature_photo_id`. Chaque intervenant atteste ainsi que la fiche lui a été présentée.
 
+### Réseaux et voirie (migration 18)
+
+- `jobs` : `dt_dict_status` (a_faire / envoyee / recepisses / non_concerne), `dt_dict_reference`, `dt_dict_sent_on`, `road_permit` (brouillon JSON de la demande d'arrêté de voirie).
+- `team_members` : `aipr_profile` (operateur / encadrant / concepteur), `aipr_valid_until`.
+- `photos.kind` accepte `document` (récépissés de DT-DICT, owner_type `job`) ; photos d'un constat : owner_type `finding`.
+- **network_findings** (uniquement ajoutés) : `job_id`, `found_at`, `network_type`, `description`, `damage`, `actions_taken`, `operator_contacted`, `reporter_name`, `lat`, `lng`.
+
 ### Fil du chantier et rapport
 
 > **Réalisé (migration 17)** : `photos.stage` (avant / pendant / après), `job_notes` (`job_id`, `author_name`, `body` ; uniquement ajoutées), `job_reports` (id = id du chantier ; `works_done`, `remarks`, `advice`, `finished_on`, `status` brouillon / signe, `client_signer_name`, `client_signed_at`, `client_signature_photo_id`, `client_reserves` ; figé après réception), `report_links` (`token`, `expires_at` ≤ 60 jours, `photos` = liens signés des photos, `opened_at`). Fonction publique `report_for_client(jeton)`. Messages vocaux : remplacés par la dictée du clavier pour l'instant.

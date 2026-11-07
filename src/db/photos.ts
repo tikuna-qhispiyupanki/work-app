@@ -4,7 +4,7 @@ import { deleteFile, saveFile } from '@/files/local-files';
 
 import { db, newId, nowIso } from './database';
 
-export type PhotoKind = 'photo' | 'plan' | 'croquis' | 'signature' | 'logo';
+export type PhotoKind = 'photo' | 'plan' | 'croquis' | 'signature' | 'logo' | 'document';
 export type PhotoRow = {
   id: string;
   owner_id?: string;
@@ -25,7 +25,7 @@ export const storagePath = (companyId: string, photoId: string, thumb = false) =
 export const thumbKey = (photoId: string) => `${photoId}_min`;
 
 type NewPhoto = {
-  ownerType: 'visit' | 'tree' | 'job' | 'message' | 'quote' | 'company' | 'sheet';
+  ownerType: 'visit' | 'tree' | 'job' | 'message' | 'quote' | 'company' | 'sheet' | 'finding';
   ownerId: string;
   kind: PhotoKind;
   image: CompressedImage;

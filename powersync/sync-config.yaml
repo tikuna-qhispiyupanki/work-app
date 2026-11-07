@@ -39,6 +39,7 @@ streams:
       - SELECT * FROM job_notes WHERE company_id IN mes_entreprises
       - SELECT * FROM job_reports WHERE company_id IN mes_entreprises
       - SELECT * FROM report_links WHERE company_id IN mes_entreprises
+      - SELECT * FROM network_findings WHERE company_id IN mes_entreprises
 
   # Mon équipe (noms et métiers) : tous les membres de l'entreprise, techniciens compris.
   equipe:

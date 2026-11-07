@@ -7,7 +7,9 @@ import { confirmAction } from '@/components/confirm';
 import { Icon } from '@/components/icon';
 import { NumberField } from '@/components/number-field';
 import { Button, Card, Field, Muted, SecondaryButton } from '@/components/ui';
+import { DateField } from '@/components/date-field';
 import { Colors, Spacing } from '@/constants/theme';
+import { AIPR_LABEL, aiprState, aiprText } from '@/domain/networks';
 import { addTeamMember, removeTeamMember, setHourlyCost, TEAM_SQL, TeamMemberRow, Trade, TRADE_LABEL, updateTeamMember } from '@/db/team';
 import { euros } from '@/domain/pricing';
 
@@ -73,6 +75,7 @@ export default function TeamScreen() {
                   {TRADE_LABEL[m.trade] ?? m.trade}
                   {!m.active ? ' · inactif' : ''}
                 </Muted>
+                <Text style={[styles.aipr, ['absente', 'expiree'].includes(aiprState(m)) && { color: Colors.warning }]}>{aiprText(m)}</Text>
               </View>
               {canEdit ? <Text style={styles.cost}>{m.hourly_cost_cents != null ? `${euros(m.hourly_cost_cents)}/h` : 'coût ?'}</Text> : null}
             </Pressable>
@@ -108,6 +111,23 @@ function MemberEditor({ m, onClose }: { m: TeamMemberRow; onClose: () => void })
           value={m.hourly_cost_cents == null ? null : m.hourly_cost_cents / 100}
           onCommit={(v) => v != null && void setHourlyCost(m.id, Math.round(v * 100))}
         />
+        <Text style={styles.chipText}>AIPR (autorisation d&apos;intervention à proximité des réseaux)</Text>
+        <View style={styles.chips}>
+          {(['operateur', 'encadrant', 'concepteur'] as const).map((p) => (
+            <Pressable
+              key={p}
+              onPress={() => void updateTeamMember(m.id, { aipr_profile: m.aipr_profile === p ? null : p })}
+              style={[styles.chip, m.aipr_profile === p && styles.chipOn]}
+              accessibilityRole="radio"
+              aria-checked={m.aipr_profile === p}
+              accessibilityLabel={`AIPR ${AIPR_LABEL[p]}`}
+            >
+              <Text style={[styles.chipText, m.aipr_profile === p && { color: Colors.primaryText }]}>{AIPR_LABEL[p]}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <DateField label="AIPR valable jusqu'au" value={m.aipr_valid_until} onChange={(d) => void updateTeamMember(m.id, { aipr_valid_until: d })} />
+        <Muted>Attestation de compétence obtenue après un QCM dans un centre agréé, valable 5 ans ; l&apos;employeur délivre ensuite l&apos;AIPR.</Muted>
         <SecondaryButton
           label={m.active ? 'Marquer inactif (ne travaille plus avec moi)' : 'Remettre actif'}
           icon={m.active ? 'pause-circle-outline' : 'play-circle-outline'}
@@ -140,4 +160,5 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   chipText: { fontSize: 15, color: Colors.text },
   error: { color: Colors.danger, fontSize: 15 },
+  aipr: { fontSize: 13, color: Colors.textSecondary },
 });

@@ -19,6 +19,7 @@ import { toDate } from '@/domain/dates';
 import { ACTIVITIES, EQUIPMENT_GROUPS, MEASURES, missingSheetFields, parseJson, preventionFor, RESCUE_CHECKS, RESPONSIBILITY, RISK_GROUP_LABEL, RISKS, TREE_CHECKS } from '@/domain/intervention';
 import type { CheckValue, RiskGroup, RiskKey, RisksValue } from '@/domain/intervention';
 import { emergencyBlock } from '@/domain/emergency';
+import { membersWithoutAipr } from '@/domain/networks';
 import { quickPosition } from '@/domain/geo';
 import { shareFile } from '@/pdf/share';
 import { sheetPdf } from '@/pdf/sheet-pdf-data';
@@ -40,7 +41,11 @@ export default function SheetScreen() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const { company } = useAuth();
-  const { data: jobs } = useQuery<{ site_address: string | null; site_lat: number | null; site_lng: number | null }>('SELECT site_address, site_lat, site_lng FROM jobs WHERE id = ?', [s?.job_id ?? '']);
+  const { data: jobs } = useQuery<{ site_address: string | null; site_lat: number | null; site_lng: number | null; near_power_lines: number }>('SELECT site_address, site_lat, site_lng, near_power_lines FROM jobs WHERE id = ?', [s?.job_id ?? '']);
+  const { data: aiprTeam } = useQuery<{ name: string; aipr_profile: string | null; aipr_valid_until: string | null }>(
+    'SELECT m.name, m.aipr_profile, m.aipr_valid_until FROM job_members jm JOIN team_members m ON m.id = jm.member_id WHERE jm.job_id = ? AND jm.deleted_at IS NULL',
+    [s?.job_id ?? '']
+  );
   const job = jobs[0];
   const companyName = company?.name ?? null;
   if (isLoading) return <Muted>Chargement…</Muted>;
@@ -208,6 +213,9 @@ export default function SheetScreen() {
         />
       ) : null}
       {saved ? <Text style={styles.ok}>Textes gardés : ils seront repris sur tes prochaines fiches.</Text> : null}
+      {job?.near_power_lines && membersWithoutAipr(aiprTeam).length ? (
+        <Text style={styles.warning}>⚠ Chantier près de réseaux : AIPR manquante ou expirée pour {membersWithoutAipr(aiprTeam).map((m) => m.name).join(', ')} (Plus → Mon équipe).</Text>
+      ) : null}
       {draft ? <SignCard sheet={s} missing={missing} onError={setError} /> : null}
       {s.status === 'signee' ? <AcksCard sheet={s} acks={acks} team={team} onError={setError} /> : null}
 
