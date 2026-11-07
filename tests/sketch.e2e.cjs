@@ -2,7 +2,7 @@
 // Lancer via : bash scripts/e2e.sh sketch
 const { chromium, devices } = require('playwright');
 const { execFileSync } = require('child_process');
-const { login } = require('./helpers/login.cjs');
+const { login, tab, menu, syncState } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
 const CO = `(select company_id from memberships where user_id = 'eeeeeeee-0000-4000-8000-00000000e2e0')`;
@@ -32,42 +32,44 @@ let page;
 
   await p.goto(APP, { waitUntil: 'load' });
   await login(p);
-  await vis(p.getByText('+ Nouvelle visite')).click();
+  await vis(p.getByText('Nouvelle visite', { exact: true })).click();
   await field('Nom').fill('M. Croquis');
-  await vis(p.getByText('📍 Me localiser')).click();
+  await vis(p.getByText('Me localiser')).click();
   await vis(p.getByText(/Adresse la plus proche/)).waitFor({ timeout: 20000 });
   await p.waitForTimeout(2500); // tuiles de la carte (image du plan enregistrée avec la visite)
   await vis(p.getByText('Enregistrer la visite')).click();
+  await tab(p, 'Arbres').click();
   await vis(p.getByAltText('Plan du chantier')).waitFor({ timeout: 20000 });
+  await tab(p, 'Croquis').click();
 
   // 1. Page blanche : un trait annulé, puis deux traits
-  await vis(p.getByText('✏️ Page blanche')).click();
+  await vis(p.getByText('Page blanche')).click();
   await draw([[0.1, 0.1], [0.5, 0.5]]);
   await vis(p.getByText('↶ Annuler')).click();
   await vis(p.getByLabel('Couleur Bleu')).click();
   await draw([[0.2, 0.8], [0.4, 0.3], [0.7, 0.6]]);
   await vis(p.getByText('Épais', { exact: true })).click();
   await draw([[0.6, 0.2], [0.9, 0.2]]);
-  await vis(p.getByText('✓ Enregistrer le croquis')).click();
+  await vis(p.getByText('Enregistrer le croquis')).click();
   await vis(p.getByLabel('Voir le croquis')).waitFor({ timeout: 15000 });
   console.log(`1. croquis sur page blanche enregistré (${await countSketches()} croquis)`);
 
   // 2. Sur le plan (vue aérienne avec repère)
-  await vis(p.getByText('✏️ Sur le plan')).click();
+  await vis(p.getByText('Sur le plan')).click();
   await vis(p.locator('canvas[aria-label="Zone de dessin du croquis"]')).waitFor();
   await p.waitForTimeout(800);
   await draw([[0.3, 0.7], [0.5, 0.5], [0.52, 0.48]]); // flèche vers le chantier
   await p.screenshot({ path: 'tests/out-croquis-plan.png' });
-  await vis(p.getByText('✓ Enregistrer le croquis')).click();
+  await vis(p.getByText('Enregistrer le croquis')).click();
   await p.waitForFunction(() => document.querySelectorAll('[aria-label="Voir le croquis"]').length >= 2, null, { timeout: 15000 });
   console.log(`2. croquis sur le plan enregistré (${await countSketches()} croquis)`);
 
   // 3. Retouche : remplace l'ancien croquis
   await p.getByLabel('Voir le croquis').filter({ visible: true }).last().click();
-  await vis(p.getByText('✏️ Retoucher le croquis')).click();
+  await vis(p.getByText('Retoucher le croquis')).click();
   await p.waitForTimeout(800);
   await draw([[0.1, 0.1], [0.3, 0.1]]);
-  await vis(p.getByText('✓ Enregistrer le croquis')).click();
+  await vis(p.getByText('Enregistrer le croquis')).click();
   await p.goBack();
   await p.waitForTimeout(1500);
   const n = await countSketches();

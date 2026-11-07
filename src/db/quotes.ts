@@ -161,12 +161,14 @@ export async function addQuoteLine(quoteId: string, kind: 'location' | 'libre') 
   const { companyId, userId } = currentIds();
   const now = nowIso();
   const pos = await db.get<{ p: number | null }>('SELECT MAX(position) AS p FROM quote_lines WHERE quote_id = ?', [quoteId]);
+  const id = newId();
   await db.execute(
     `INSERT INTO quote_lines (id, company_id, created_at, updated_at, created_by, quote_id, position, kind, label, unit, quantity, unit_price_ht_cents,
        retention, big_trunk, urgent, surcharge_bp, total_ht_cents, offered)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0, 0)`,
-    [newId(), companyId, now, now, userId, quoteId, (pos.p ?? -1) + 1, kind, kind === 'location' ? 'Location de matériel (nacelle, rogneuse…)' : 'Prestation', kind === 'location' ? 'jour' : 'forfait']
+    [id, companyId, now, now, userId, quoteId, (pos.p ?? -1) + 1, kind, kind === 'location' ? 'Location de matériel (nacelle, rogneuse…)' : 'Prestation', kind === 'location' ? 'jour' : 'forfait']
   );
+  return id;
 }
 
 export async function removeQuoteLine(quoteId: string, lineId: string) {

@@ -18,10 +18,10 @@ export function PhotoPicker({ onPicked, disabled }: { onPicked: (files: File[]) 
       <input ref={camera} type="file" accept="image/*" capture="environment" onChange={handle} style={{ display: 'none' }} aria-label="Prendre une photo" />
       <input ref={gallery} type="file" accept="image/*" multiple onChange={handle} style={{ display: 'none' }} aria-label="Choisir des photos" />
       <View style={{ flex: 1 }}>
-        <SecondaryButton label="📷 Prendre une photo" onPress={() => camera.current?.click()} disabled={disabled} />
+        <SecondaryButton label="Prendre une photo" icon="camera-outline" onPress={() => camera.current?.click()} disabled={disabled} />
       </View>
       <View style={{ flex: 1 }}>
-        <SecondaryButton label="🖼 Choisir" onPress={() => gallery.current?.click()} disabled={disabled} />
+        <SecondaryButton label="Choisir" icon="image-outline" onPress={() => gallery.current?.click()} disabled={disabled} />
       </View>
     </View>
   );

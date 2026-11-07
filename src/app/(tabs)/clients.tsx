@@ -15,7 +15,7 @@ export default function ClientsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Button label="+ Nouveau client" onPress={() => router.push('/clients/nouveau')} />
+      <Button label="Nouveau client" icon="person-add-outline" onPress={() => router.push('/clients/nouveau')} />
       <Field label="Rechercher (nom, téléphone, commune)" value={q} onChangeText={setQ} autoCapitalize="none" />
       <Card title={`${clients.length} client${clients.length > 1 ? 's' : ''}`}>
         {isLoading ? <Muted>Chargement…</Muted> : null}

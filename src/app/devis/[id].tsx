@@ -1,3 +1,4 @@
+import { Icon, type IconName } from '@/components/icon';
 import { useQuery } from '@powersync/react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -19,7 +20,7 @@ import { FRANCHISE_MENTION, quoteTotalsFromLines } from '@/domain/quote-build';
 import { quotePdf } from '@/pdf/quote-pdf-data';
 import { shareFile } from '@/pdf/share';
 
-const STATUS: Record<string, string> = { brouillon: 'Brouillon', finalise: 'Finalisé', signe: '✓ Signé', refuse: 'Refusé' };
+const STATUS: Record<string, string> = { brouillon: 'Brouillon', finalise: 'Finalisé', signe: 'Signé', refuse: 'Refusé' };
 
 export default function QuoteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,6 +31,7 @@ export default function QuoteScreen() {
   const { data: clients } = useQuery<{ name: string | null; kind: string | null }>('SELECT name, kind FROM clients WHERE id = ?', [data[0]?.client_id ?? '']);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [openLine, setOpenLine] = useState<string | null>(null); // une seule ligne ouverte à la fois
   const q = data[0];
   if (isLoading) return <Muted>Chargement…</Muted>;
   if (!q) return <Muted>Devis introuvable.</Muted>;
@@ -90,15 +92,15 @@ export default function QuoteScreen() {
 
       <Card title={`Détail (${lines.length} ligne${lines.length > 1 ? 's' : ''})`}>
         {lines.map((l) => (
-          <LineEditor key={l.id} quoteId={q.id} line={l} editable={draft} onError={setError} />
+          <LineEditor key={l.id} quoteId={q.id} line={l} editable={draft} open={openLine === l.id} onToggle={() => setOpenLine(openLine === l.id ? null : l.id)} onError={setError} />
         ))}
         {draft ? (
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
-              <SecondaryButton label="+ Ligne libre" onPress={() => run(() => addQuoteLine(q.id, 'libre'))} />
+              <SecondaryButton label="Ligne libre" icon="add-outline" onPress={() => run(async () => setOpenLine(await addQuoteLine(q.id, 'libre')))} />
             </View>
             <View style={{ flex: 1 }}>
-              <SecondaryButton label="+ Location matériel" onPress={() => run(() => addQuoteLine(q.id, 'location'))} />
+              <SecondaryButton label="Location matériel" icon="add-outline" onPress={() => run(async () => setOpenLine(await addQuoteLine(q.id, 'location')))} />
             </View>
           </View>
         ) : null}
@@ -108,7 +110,7 @@ export default function QuoteScreen() {
         <Row label="Total HT" value={euros(q.subtotal_ht_cents)} />
         {q.vat_regime === 'franchise' ? <Muted>{FRANCHISE_MENTION}</Muted> : <Row label={`TVA ${percent(q.vat_rate_bp)}`} value={euros(q.vat_cents)} />}
         <Row label={q.vat_regime === 'franchise' ? 'Net à payer' : 'Total TTC'} value={euros(q.total_ttc_cents)} strong />
-        {offeredCents ? <Text style={styles.gift}>🎁 Geste commercial : {euros(offeredCents)} HT offerts</Text> : null}
+        {offeredCents ? <Text style={styles.gift}>Geste commercial : {euros(offeredCents)} HT offerts</Text> : null}
         {q.deposit_bp ? <Muted>Acompte à la signature : {percent(q.deposit_bp)} soit {euros(Math.round((q.total_ttc_cents * q.deposit_bp) / 10000))}</Muted> : null}
       </Card>
 
@@ -126,8 +128,8 @@ export default function QuoteScreen() {
               Pour finaliser, complète la fiche entreprise ({missing.join(', ')}).
             </Text>
           ) : null}
-          {missing.length ? <SecondaryButton label="🏢 Compléter la fiche entreprise" onPress={() => router.push('/fiche-entreprise')} /> : null}
-          <Button label={busy ? 'Finalisation…' : '✓ Finaliser le devis'} onPress={finalize} disabled={busy || missing.length > 0} />
+          {missing.length ? <SecondaryButton label="Compléter la fiche entreprise" icon="business-outline" onPress={() => router.push('/fiche-entreprise')} /> : null}
+          <Button label={busy ? 'Finalisation…' : 'Finaliser le devis'} onPress={finalize} disabled={busy || missing.length > 0} icon="checkmark-outline" />
           <SecondaryButton
             label="Supprimer ce brouillon"
             danger
@@ -143,7 +145,7 @@ export default function QuoteScreen() {
         <QuoteSign quote={q} clientName={clientName} />
       )}
       <SecondaryButton
-        label={busy ? 'Préparation du PDF…' : `📄 PDF du devis${draft ? ' (brouillon)' : ''}`}
+        label={busy ? 'Préparation du PDF…' : `PDF du devis${draft ? ' (brouillon)' : ''}`} icon="document-text-outline"
         disabled={busy}
         onPress={async () => {
           setBusy(true);
@@ -158,23 +160,53 @@ export default function QuoteScreen() {
   );
 }
 
-function LineEditor({ quoteId, line, editable, onError }: { quoteId: string; line: QuoteLineRow; editable: boolean; onError: (e: string | null) => void }) {
+type LineProps = { quoteId: string; line: QuoteLineRow; editable: boolean; open: boolean; onToggle: () => void; onError: (e: string | null) => void };
+
+// Ligne du devis : résumé compact (libellé, quantité × prix, total) ; un appui l'ouvre pour la modifier.
+function LineEditor({ quoteId, line, editable, open, onToggle, onError }: LineProps) {
   const [label, setLabel] = useState(line.label);
   const change = (c: Parameters<typeof updateQuoteLine>[2]) => updateQuoteLine(quoteId, line.id, c).catch((e) => onError(String(e)));
+  const summary = (
+    <View style={{ flex: 1, gap: 2 }}>
+      <Text style={styles.lineLabel} numberOfLines={open ? undefined : 2}>
+        {line.label}
+      </Text>
+      <Muted>
+        {String(line.quantity).replace('.', ',')} {line.unit ?? ''} × {euros(line.unit_price_ht_cents)}
+        {line.surcharge_bp ? ` + ${percent(line.surcharge_bp)}` : ''}
+      </Muted>
+    </View>
+  );
+  const total = (
+    <Text style={[styles.lineTotal, !!line.offered && styles.offered]}>
+      {line.offered ? `Offert (valeur ${euros(line.total_ht_cents)} HT)` : `${euros(line.total_ht_cents)} HT`}
+    </Text>
+  );
   if (!editable) {
     return (
       <View style={styles.line}>
-        <Text style={styles.lineLabel}>{line.label}</Text>
-        <Muted>
-          {String(line.quantity).replace('.', ',')} {line.unit ?? ''} × {euros(line.unit_price_ht_cents)}
-          {line.surcharge_bp ? ` + ${percent(line.surcharge_bp)}` : ''}
-        </Muted>
-        <Text style={styles.lineTotal}>{line.offered ? `Offert (valeur ${euros(line.total_ht_cents)} HT)` : `${euros(line.total_ht_cents)} HT`}</Text>
+        {summary}
+        {total}
       </View>
     );
   }
+  if (!open) {
+    return (
+      <Pressable onPress={onToggle} style={[styles.line, styles.lineRow]} accessibilityRole="button" accessibilityLabel={`Modifier la ligne ${line.label}`}>
+        {summary}
+        <View style={{ alignItems: 'flex-end', gap: 4, maxWidth: '45%' }}>
+          {total}
+          <Icon name="create-outline" size={18} color={Colors.primary} />
+        </View>
+      </Pressable>
+    );
+  }
   return (
-    <View style={styles.line}>
+    <View style={[styles.line, styles.lineOpen]}>
+      <Pressable onPress={onToggle} style={styles.lineRow} accessibilityRole="button" accessibilityLabel="Fermer la ligne">
+        <Text style={[styles.lineLabel, { flex: 1 }]}>Modifier la ligne</Text>
+        <Icon name="chevron-up" size={20} color={Colors.primary} />
+      </Pressable>
       <Field label="Libellé" value={label} onChangeText={setLabel} onBlur={() => label !== line.label && change({ label })} multiline />
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
@@ -192,7 +224,7 @@ function LineEditor({ quoteId, line, editable, onError }: { quoteId: string; lin
             <Chip label="Urgence" on={!!line.urgent} onPress={() => change({ urgent: line.urgent ? 0 : 1 })} />
           </>
         ) : null}
-        <Chip label="🎁 Offrir" on={!!line.offered} onPress={() => change({ offered: line.offered ? 0 : 1 })} />
+        <Chip label="Offrir" icon="gift-outline" on={!!line.offered} onPress={() => change({ offered: line.offered ? 0 : 1 })} />
       </View>
       <View style={styles.lineFoot}>
         <Text style={[styles.lineTotal, !!line.offered && styles.offered]}>
@@ -212,9 +244,10 @@ function NotesField({ quoteId, value }: { quoteId: string; value: string }) {
   return <Field label="Remarques sur le devis (affichées au client)" value={t} onChangeText={setT} onBlur={() => t !== value && void setQuoteNotes(quoteId, t)} multiline />;
 }
 
-function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+function Chip({ label, on, onPress, icon }: { label: string; on: boolean; onPress: () => void; icon?: IconName }) {
   return (
-    <Pressable onPress={onPress} style={[styles.chip, on && styles.chipOn]} accessibilityRole="switch" accessibilityState={{ checked: on }} accessibilityLabel={label}>
+    <Pressable onPress={onPress} style={[styles.chip, on && styles.chipOn, icon && { flexDirection: 'row', alignItems: 'center', gap: 4 }]} accessibilityRole="switch" accessibilityState={{ checked: on }} accessibilityLabel={label}>
+      {icon ? <Icon name={icon} size={15} color={on ? Colors.primaryText : Colors.primary} /> : null}
       <Text style={[styles.chipText, on && { color: Colors.primaryText }]}>{label}</Text>
     </Pressable>
   );
@@ -230,6 +263,8 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 }
 
 const styles = StyleSheet.create({
+  lineRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
+  lineOpen: { borderLeftWidth: 3, borderLeftColor: Colors.primary, paddingLeft: Spacing.sm },
   container: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xl },
   row: { flexDirection: 'row', gap: Spacing.sm },
   big: { fontSize: 18, fontWeight: '600', color: Colors.text },

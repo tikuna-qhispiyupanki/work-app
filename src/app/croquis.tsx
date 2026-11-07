@@ -53,7 +53,7 @@ export default function SketchScreen() {
       {loading ? <Muted>Chargement de l&apos;image…</Muted> : <SketchEditor ref={editor} background={background} />}
       <Muted>Dessine au doigt. Indique les accès, la circulation, les zones à protéger, les arbres à traiter.</Muted>
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button label={busy ? 'Enregistrement…' : '✓ Enregistrer le croquis'} onPress={save} disabled={busy || loading} />
+      <Button label={busy ? 'Enregistrement…' : 'Enregistrer le croquis'} onPress={save} disabled={busy || loading} icon="checkmark-outline" />
     </ScrollView>
   );
 }

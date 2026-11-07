@@ -2,7 +2,7 @@
 // Lancer via : bash scripts/e2e.sh clients-manage
 const { chromium, devices } = require('playwright');
 const { execFileSync } = require('child_process');
-const { login } = require('./helpers/login.cjs');
+const { login, tab, menu, syncState } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
 const CO = `(select company_id from memberships where user_id = 'eeeeeeee-0000-4000-8000-00000000e2e0')`;
@@ -22,8 +22,8 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
   await login(p);
 
   // 1. Création d'un client professionnel depuis le carnet
-  await vis(p.getByText('📒 Clients')).click();
-  await vis(p.getByText('+ Nouveau client')).click();
+  await tab(p, 'Clients').click();
+  await vis(p.getByRole('button', { name: 'Nouveau client', exact: true })).click();
   await vis(p.getByText('Professionnel', { exact: true })).click();
   await field('Nom de la société (ou du contact)').fill('Syndic Les Filaos');
   await field('Téléphone').fill('0262 11 22 33');
@@ -33,7 +33,7 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
   await field('Commune').fill('Saint-Denis');
   await vis(p.getByText('Créer la fiche client')).click();
   await vis(p.getByText('Client professionnel')).waitFor();
-  for (const a of ['📞 Appeler', '💬 SMS', '✉️ E-mail', '🧭 Itinéraire']) await vis(p.getByText(a)).waitFor();
+  for (const a of ['Appeler', 'SMS', 'E-mail', 'Itinéraire']) await vis(p.getByText(a)).waitFor();
   await p.screenshot({ path: 'tests/out-fiche-client.png', fullPage: true });
   console.log('1. client professionnel créé sans visite ; boutons Appeler, SMS, E-mail, Itinéraire présents');
 
@@ -49,7 +49,7 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
   await vis(p.getByText('Syndic Les Filaos · Pro')).waitFor();
   await vis(p.getByText('Syndic Les Filaos · Pro')).click();
   await vis(p.getByText('Retirer du carnet')).click();
-  await vis(p.getByText('+ Nouveau client')).waitFor();
+  await vis(p.getByRole('button', { name: 'Nouveau client', exact: true })).waitFor();
   await p.waitForTimeout(500);
   const still = await p.getByText('Syndic Les Filaos · Pro').filter({ visible: true }).count();
   let row;
@@ -63,12 +63,13 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
 
   // 4. Zoom « loupe » sur la carte des arbres
   await p.goto(APP, { waitUntil: 'load' });
-  await vis(p.getByText('+ Nouvelle visite')).click();
+  await vis(p.getByText('Nouvelle visite', { exact: true })).click();
   await field('Nom').fill('M. Zoom');
-  await vis(p.getByText('📍 Me localiser')).click();
+  await vis(p.getByText('Me localiser')).click();
   await vis(p.getByText(/Adresse la plus proche/)).waitFor({ timeout: 20000 });
   await vis(p.getByText('Enregistrer la visite')).click();
-  await vis(p.getByText('➕ Placer des arbres')).click();
+  await tab(p, 'Arbres').click();
+  await vis(p.getByText('Placer des arbres')).click();
   for (let i = 0; i < 3; i++) await p.getByRole('button', { name: '+', exact: true }).filter({ visible: true }).last().click();
   await vis(p.getByText('loupe ×4')).waitFor();
   const map = p.locator('[aria-label="Carte du chantier"]').filter({ visible: true }).last();

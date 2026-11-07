@@ -44,7 +44,7 @@ export function VisitQuotes({ visitId }: { visitId: string }) {
       ))}
       {!quotes.length ? <Muted>Le devis reprend les arbres de la visite (intervention, contraintes, temps, déchets) et ajoute le déplacement.</Muted> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button label={busy ? 'Création…' : quotes.length ? '📄 Créer un nouveau devis' : '📄 Créer le devis'} onPress={create} disabled={busy} />
+      <Button label={busy ? 'Création…' : quotes.length ? 'Créer un nouveau devis' : 'Créer le devis'} onPress={create} disabled={busy} icon="document-text-outline" />
     </Card>
   );
 }

@@ -3,7 +3,7 @@
 const { chromium, devices } = require('playwright');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { login } = require('./helpers/login.cjs');
+const { login, tab, menu, syncState } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const XLSX = path.join(__dirname, '..', 'docs', 'Grille_tarifaire_elagage_Reunion_2026.xlsx');
 const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
@@ -34,24 +34,25 @@ let page;
   await p.goto(APP, { waitUntil: 'load' });
   await login(p);
   // Grille neuve
-  await vis(p.getByLabel('Mon compte')).click();
-  await vis(p.getByText('💶 Grille de prix')).click();
+  await tab(p, 'Plus').click();
+  await vis(p.getByText('Grille de prix', { exact: true })).click();
   const none = vis(p.getByText('Aucune grille de prix'));
   await Promise.race([none.waitFor({ timeout: 20000 }), vis(p.getByText('Paramètres', { exact: true })).waitFor({ timeout: 20000 })]);
-  await p.locator(`input[aria-label="${(await none.isVisible()) ? '📄 Importer mon fichier Excel' : '📄 Importer une nouvelle version (Excel)'}"]`).setInputFiles(XLSX);
+  await p.locator(`input[aria-label="${(await none.isVisible()) ? 'Importer mon fichier Excel' : 'Importer une nouvelle version (Excel)'}"]`).setInputFiles(XLSX);
   await vis(p.getByText(/^(Enregistrer cette grille|Remplacer la grille actuelle)$/)).click();
   await vis(p.getByText('Prix retenu : 313 € HT')).waitFor();
 
   // Visite avec 3 arbres = exemple du calculateur Excel
   await p.goto(APP, { waitUntil: 'load' });
-  await vis(p.getByText('+ Nouvelle visite')).click();
+  await vis(p.getByText('Nouvelle visite', { exact: true })).click();
   await field('Nom').fill('Mme Devis');
   await field('Adresse').fill('5 allée des Lataniers');
   await field('Code postal').fill('97434');
   await field('Commune').fill('Saint-Gilles');
   await vis(p.getByText('Enregistrer la visite')).click();
+  await tab(p, 'Arbres').click();
   const addTree = async (name, item, opts = {}) => {
-    await vis(p.getByText('➕ Ajouter un arbre sans carte (hors-ligne)')).click();
+    await vis(p.getByText('Ajouter un arbre sans carte (hors-ligne)')).click();
     await vis(p.getByText(/^Arbre n° \d+$/)).waitFor();
     await field('Nom ou essence').fill(name);
     await vis(p.getByText("Choisir l'intervention")).click();
@@ -72,7 +73,8 @@ let page;
   console.log('1. visite avec 3 arbres (exemple Excel) : estimation 2 455,15 € HT');
 
   // Création du devis
-  await vis(p.getByText('📄 Créer le devis')).click();
+  await tab(p, 'Devis').click();
+  await vis(p.getByText('Créer le devis')).click();
   await vis(p.getByText('Devis (brouillon)')).waitFor();
   await vis(p.getByText('Détail (6 lignes)')).waitFor();
   await vis(p.getByText('TVA non applicable, art. 293 B du CGI')).waitFor();
@@ -80,7 +82,7 @@ let page;
   console.log('2. devis brouillon : 6 lignes, franchise de TVA, net à payer 2 455,15 € (= calculateur Excel)');
 
   // Modification : ligne de location
-  await vis(p.getByText('+ Location matériel')).click();
+  await vis(p.getByText('Location matériel')).click();
   await vis(p.getByText('Détail (7 lignes)')).waitFor();
   await p.getByLabel('Prix unitaire HT (€)', { exact: true }).filter({ visible: true }).last().fill('150');
   await blur();
@@ -89,7 +91,7 @@ let page;
 
   // Finalisation bloquée tant que la fiche entreprise est incomplète
   await vis(p.getByText(/Pour finaliser, complète la fiche entreprise/)).waitFor();
-  await vis(p.getByText('🏢 Compléter la fiche entreprise')).click();
+  await vis(p.getByText('Compléter la fiche entreprise')).click();
   await field("Nom de l'entreprise *").fill('Élagage Test E2E');
   await field('Adresse *').fill('1 rue du Test');
   await field('Code postal *').fill('97400');
@@ -101,10 +103,10 @@ let page;
   console.log('4. finalisation bloquée sans fiche entreprise → fiche complétée');
 
   // Finalisation : numéro, dates, verrouillage
-  await vis(p.getByText('✓ Finaliser le devis')).click();
+  await vis(p.getByText('Finaliser le devis')).click();
   await vis(p.getByText(/^Devis D-\d{4}-\d{4}$/)).waitFor({ timeout: 15000 });
   const number = (await vis(p.getByText(/^Devis D-\d{4}-\d{4}$/)).innerText()).replace('Devis ', '');
-  const editable = await p.getByText('+ Ligne libre').filter({ visible: true }).count();
+  const editable = await p.getByText('Ligne libre').filter({ visible: true }).count();
   await p.screenshot({ path: 'tests/out-devis.png', fullPage: true });
   console.log(`5. finalisé : numéro ${number}, plus modifiable (${editable ? 'ENCORE MODIFIABLE' : 'boutons retirés'})`);
   const r = await waitSql(
@@ -119,12 +121,14 @@ let page;
   // Hors-ligne : un nouveau devis est numéroté sans réseau (réserve de numéros du téléphone)
   await p.goto(APP, { waitUntil: 'load' });
   await vis(p.getByText('Mme Devis')).click();
-  await vis(p.getByText('📄 Créer un nouveau devis')).waitFor();
+  await tab(p, 'Infos').waitFor(); // page de la visite ouverte (sinon « Devis » = onglet du bas)
+  await tab(p, 'Devis').click();
+  await vis(p.getByText('Créer un nouveau devis')).waitFor();
   await p.evaluate(async () => { await navigator.serviceWorker.ready; });
   await ctx.setOffline(true);
-  await vis(p.getByText('📄 Créer un nouveau devis')).click();
+  await vis(p.getByText('Créer un nouveau devis')).click();
   await vis(p.getByText('Devis (brouillon)')).waitFor();
-  await vis(p.getByText('✓ Finaliser le devis')).click();
+  await vis(p.getByText('Finaliser le devis')).click();
   await vis(p.getByText(/^Devis D-\d{4}-\d{4}$/)).waitFor({ timeout: 15000 });
   const number2 = (await vis(p.getByText(/^Devis D-\d{4}-\d{4}$/)).innerText()).replace('Devis ', '');
   console.log(`6. HORS LIGNE : devis finalisé avec le numéro ${number2}`);

@@ -3,7 +3,7 @@
 const { chromium, devices } = require('playwright');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { login } = require('./helpers/login.cjs');
+const { login, tab, menu, syncState } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const PHOTO = path.join(__dirname, 'fixtures', 'photo-4000x3000-gps.jpg');
 const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
@@ -30,16 +30,17 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
     }
     throw new Error(`le serveur n'a pas reçu ${n} fichiers`);
   };
-  const photosSent = (p) => p.waitForFunction(() => !/photo.? (en cours d’envoi|à envoyer)/.test(document.body.innerText), null, { timeout: 60000 });
+  const photosSent = (p) => p.waitForFunction(() => [...document.querySelectorAll('[aria-label^="Synchronisation : "]')].every((e) => !/photo.? (en cours d’envoi|à envoyer)/.test(e.getAttribute('aria-label'))), null, { timeout: 60000 });
 
   // 1. A : visite + photo choisie dans la galerie
   const A = await phone();
   await A.goto(APP, { waitUntil: 'load' });
   await login(A);
-  await A.getByText('+ Nouvelle visite').click();
+  await A.getByText('Nouvelle visite', { exact: true }).click();
   await field(A, 'Nom').fill('M. Photo');
   await vis(A, A.getByText('Enregistrer la visite')).click();
-  await vis(A, A.getByText('📷 Prendre une photo')).waitFor();
+  await tab(A, 'Photos').click();
+  await vis(A, A.getByText('Prendre une photo')).waitFor();
   await A.locator('input[aria-label="Choisir des photos"]').setInputFiles(PHOTO);
   await vis(A, A.getByLabel('Voir la photo')).waitFor({ timeout: 20000 });
   console.log('1. photo ajoutée : miniature affichée tout de suite');
@@ -57,6 +58,7 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
   await B.goto(APP, { waitUntil: 'load' });
   await login(B);
   await vis(B, B.getByText('M. Photo')).click();
+  await tab(B, 'Photos').click();
   await vis(B, B.getByLabel('Voir la photo')).click();
   const img = vis(B, B.getByAltText('Photo'));
   await img.waitFor({ timeout: 30000 });
@@ -73,7 +75,7 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
   // 4. Hors-ligne : la photo attend, puis part au retour du réseau
   await A.context().setOffline(true);
   await A.locator('input[aria-label="Choisir des photos"]').setInputFiles(PHOTO);
-  await vis(A, A.getByText(/1 photo à envoyer au retour du réseau/)).waitFor({ timeout: 20000 });
+  await syncState(A, /1 photo à envoyer au retour du réseau/, 20000);
   console.log('4. HORS LIGNE : « 1 photo à envoyer au retour du réseau »');
   await A.context().setOffline(false);
   await waitServerFiles(4);

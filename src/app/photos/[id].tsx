@@ -35,7 +35,7 @@ export default function PhotoScreen() {
       </Card>
       {p.kind === 'croquis' ? (
         <SecondaryButton
-          label="✏️ Retoucher le croquis"
+          label="Retoucher le croquis" icon="brush-outline"
           onPress={() => router.push({ pathname: '/croquis', params: { visit: p.owner_id, fond: p.id, remplace: p.id } })}
         />
       ) : null}

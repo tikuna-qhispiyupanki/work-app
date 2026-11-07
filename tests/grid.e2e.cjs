@@ -3,7 +3,7 @@
 const { chromium, devices } = require('playwright');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { login } = require('./helpers/login.cjs');
+const { login, tab, menu, syncState } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const XLSX = path.join(__dirname, '..', 'docs', 'Grille_tarifaire_elagage_Reunion_2026.xlsx');
 const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
@@ -34,10 +34,10 @@ const waitSql = async (q, ok, label) => {
   const A = await phone();
   await A.goto(APP, { waitUntil: 'load' });
   await login(A);
-  await vis(A, A.getByLabel('Mon compte')).click();
-  await vis(A, A.getByText('💶 Grille de prix')).click();
+  await tab(A, 'Plus').click();
+  await vis(A, A.getByText('Grille de prix', { exact: true })).click();
   await vis(A, A.getByText('Aucune grille de prix')).waitFor();
-  await A.locator('input[aria-label="📄 Importer mon fichier Excel"]').setInputFiles(XLSX);
+  await A.locator('input[aria-label="Importer mon fichier Excel"]').setInputFiles(XLSX);
   await vis(A, A.getByText('✓ 23 prestations dans 6 catégories')).waitFor({ timeout: 15000 });
   await vis(A, A.getByText('✓ Prix recalculés identiques à ceux du fichier')).waitFor();
   await A.screenshot({ path: 'tests/out-grille-verification.png' });
@@ -67,8 +67,8 @@ const waitSql = async (q, ok, label) => {
   const B = await phone();
   await B.goto(APP, { waitUntil: 'load' });
   await login(B);
-  await vis(B, B.getByLabel('Mon compte')).click();
-  await vis(B, B.getByText('💶 Grille de prix')).click();
+  await tab(B, 'Plus').click();
+  await vis(B, B.getByText('Grille de prix', { exact: true })).click();
   await vis(B, B.getByText('Prix retenu : 400 € HT')).waitFor({ timeout: 45000 });
   console.log('4. autre appareil : grille reçue avec « mon prix » à 400 €');
 

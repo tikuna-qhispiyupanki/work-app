@@ -62,7 +62,7 @@ export function QuoteSign({ quote, clientName }: { quote: QuoteRow; clientName: 
       <Field label="Nom de la personne qui signe" value={name} onChangeText={setName} autoCapitalize="words" />
       <SignaturePad ref={pad} onInk={setInk} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button label={busy ? 'Enregistrement…' : '✍️ Valider la signature (Bon pour accord)'} onPress={sign} disabled={busy || !ink} />
+      <Button label={busy ? 'Enregistrement…' : 'Valider la signature (Bon pour accord)'} onPress={sign} disabled={busy || !ink} icon="create-outline" />
       <SecondaryButton
         label="Le client refuse le devis"
         danger

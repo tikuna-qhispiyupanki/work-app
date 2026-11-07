@@ -95,7 +95,7 @@ export default function GridScreen() {
           {canEdit ? (
             <>
               <Button label={busy ? 'Chargement…' : 'Charger la grille La Réunion 2026'} onPress={loadStarter} disabled={busy} />
-              <FileButton label="📄 Importer mon fichier Excel" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onFile={async (f) => readFile(await f.arrayBuffer(), f.name)} />
+              <FileButton label="Importer mon fichier Excel" icon="document-text-outline" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onFile={async (f) => readFile(await f.arrayBuffer(), f.name)} />
             </>
           ) : (
             <Muted>Seuls le gérant et le bureau peuvent importer la grille.</Muted>
@@ -109,7 +109,7 @@ export default function GridScreen() {
               {grid.source_file ? ` depuis « ${grid.source_file} »` : ''}
             </Muted>
             {canEdit ? (
-              <FileButton label="📄 Importer une nouvelle version (Excel)" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onFile={async (f) => readFile(await f.arrayBuffer(), f.name)} />
+              <FileButton label="Importer une nouvelle version (Excel)" icon="document-text-outline" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onFile={async (f) => readFile(await f.arrayBuffer(), f.name)} />
             ) : (
               <Muted>Lecture seule : seuls le gérant et le bureau modifient les prix.</Muted>
             )}

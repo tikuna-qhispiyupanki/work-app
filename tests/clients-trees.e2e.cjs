@@ -1,7 +1,7 @@
 // Test de bout en bout : arbres sur la carte, image du plan avec arbres, carnet clients et historique.
 // Nécessite l'accès réseau à data.geopf.fr. Lancer : npx serve -s dist -l 8081, puis npm run test:clients
 const { chromium, devices } = require('playwright');
-const { login } = require('./helpers/login.cjs');
+const { login, tab, menu, syncState } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
 
@@ -25,18 +25,19 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   // 1. Première visite avec localisation
   await p.goto(APP, { waitUntil: 'load' });
   await login(p);
-  await p.getByText('+ Nouvelle visite').click();
+  await p.getByText('Nouvelle visite', { exact: true }).click();
   await field('Nom').fill('Mme Técher');
   await field('Téléphone').fill('0692 12 34 56');
-  await p.getByText('📍 Me localiser').click();
+  await p.getByText('Me localiser').click();
   await p.getByText(/Adresse la plus proche/).waitFor({ timeout: 20000 });
   await field('Accès (portail, stationnement, chemin…)').fill('Portail vert, se garer devant');
   await p.getByText('Enregistrer la visite').click();
-  await vis(p.getByText('📒 Fiche client')).waitFor();
+  await vis(p.getByText(/^Fiche client/)).waitFor();
   console.log('1. visite 1 créée pour Mme Técher');
 
   // 2. Placer deux arbres en touchant la carte
-  await vis(p.getByText('➕ Placer des arbres')).click();
+  await tab(p, 'Arbres').click();
+  await vis(p.getByText('Placer des arbres')).click();
   const map = vis(p.locator('[aria-label="Carte du chantier"]'));
   await map.scrollIntoViewIfNeeded();
   await p.waitForTimeout(800);
@@ -47,27 +48,29 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   await vis(p.getByText(/Arbre n° 2 placé/)).waitFor();
   await field("Nom de l'arbre n° 2").fill('Filao côté piscine');
   await field("Repère pour l'équipe").fill('Au fond à droite');
-  await vis(p.getByText('✓ Terminer')).click();
+  await vis(p.getByText('Terminer')).click();
   await vis(p.getByText('Manguier')).waitFor();
   const dots = await p.locator('[aria-label^="Arbre "]').filter({ visible: true }).count();
   console.log(`2. deux arbres placés et nommés (${dots} repères sur la carte)`);
 
   // 3. Image du plan avec les arbres
   await p.waitForTimeout(1500); // chargement des tuiles de carte (la synchronisation garde une connexion ouverte)
-  await vis(p.getByText("📷 Enregistrer l'image du plan avec les arbres")).click();
+  await vis(p.getByText("Enregistrer l'image du plan avec les arbres")).click();
   await vis(p.getByText('Image du plan enregistrée avec les arbres')).waitFor({ timeout: 20000 });
   const img = vis(p.getByAltText('Plan du chantier'));
   await img.waitFor();
   await p.waitForTimeout(500);
   await img.screenshot({ path: 'tests/out-plan-arbres.png' });
   console.log('3. image du plan enregistrée avec les arbres numérotés');
-  await vis(p.getByText('📅 Ajouter au calendrier')).waitFor();
+  await p.getByRole('button', { name: 'Actions de la visite', exact: true }).filter({ visible: true }).first().click();
+  await vis(p.getByRole('button', { name: 'Ajouter au calendrier', exact: true })).waitFor();
+  await vis(p.getByText('Annuler', { exact: true })).click();
   console.log('   bouton « Ajouter au calendrier » présent');
   await p.screenshot({ path: 'tests/out-visite-arbres.png', fullPage: true });
 
   // 4. Deuxième visite : le client est proposé, l'adresse reprise
   await p.goto(APP, { waitUntil: 'load' });
-  await p.getByText('+ Nouvelle visite').click();
+  await p.getByText('Nouvelle visite', { exact: true }).click();
   await field('Nom').fill('téch');
   await vis(p.getByText('Déjà dans le carnet :')).waitFor();
   await vis(p.getByText('Mme Técher')).click();
@@ -81,11 +84,11 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   console.log('   visite 2 créée, la fiche indique « 1 autre visite »');
 
   // 5. Carnet et historique
-  await vis(p.getByText(/📒 Fiche client/)).click();
+  await vis(p.getByText(/^Fiche client/)).click();
   await vis(p.getByText('Historique (2 visites)')).waitFor();
   console.log('5. fiche client : historique de 2 visites');
   await p.goto(APP, { waitUntil: 'load' });
-  await p.getByText('📒 Clients').click();
+  await tab(p, 'Clients').click();
   await field('Rechercher (nom, téléphone, commune)').fill('0692 12');
   await vis(p.getByText('2 visites')).waitFor();
   const clientCount = await p.getByText('Mme Técher', { exact: true }).filter({ visible: true }).count();

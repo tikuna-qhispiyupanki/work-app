@@ -1,7 +1,7 @@
 // Test de bout en bout : créer une visite, recharger, couper le réseau, créer une visite hors-ligne.
 // Lancer : npm run build:web && npx serve -s dist -l 8081, puis npm run test:offline
 const { chromium, devices } = require('playwright');
-const { login } = require('./helpers/login.cjs');
+const { login, tab, menu, syncState } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 (async () => {
   const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
@@ -15,10 +15,10 @@ const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 
   await p.goto(APP, { waitUntil: 'load' });
   await login(p);
-  await p.getByText(/Tout est|en attente|Envoi en cours|Connexion au serveur/).first().waitFor({ timeout: 15000 });
+  await syncState(p, /Tout est|à envoyer|Envoi en cours|Connexion au serveur|en cours d’envoi/, 15000);
   console.log('1. base locale prête');
 
-  await p.getByText('+ Nouvelle visite').click();
+  await p.getByText('Nouvelle visite', { exact: true }).click();
   await fill('Nom', 'Mme Payet');
   await fill('Téléphone', '0692 00 00 00');
   await fill('Adresse', '12 chemin des Filaos');
@@ -28,14 +28,14 @@ const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
   await p.getByRole('switch').click();
   await fill('Notes (tu peux dicter avec le micro du clavier)', 'Manguier 12 m au-dessus de la piscine');
   await p.getByText('Enregistrer la visite').click();
-  await p.getByText('Visite du ').waitFor();
+  await tab(p, 'Infos').waitFor();
   await p.screenshot({ path: 'tests/out-visite.png' });
   console.log('2. visite créée, URL', new URL(p.url()).pathname);
 
   await p.goto(APP, { waitUntil: 'load' });
   await p.getByText('Mme Payet').waitFor();
   console.log('3. après rechargement : visite toujours là');
-  console.log('   bandeau :', await p.getByText(/● En ligne/).first().innerText());
+  console.log('   bandeau :', await p.locator('[aria-label^="Synchronisation : "]').filter({ visible: true }).first().getAttribute('aria-label'));
 
   // Attendre que le service worker contrôle la page, puis couper le réseau.
   await p.evaluate(async () => { await navigator.serviceWorker.ready; });
@@ -46,16 +46,16 @@ const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
   await p.getByText('Mme Payet').waitFor({ timeout: 15000 });
   console.log('4. HORS LIGNE : application rouverte (SW actif:', controlled + '), visite toujours là');
 
-  await p.getByText('+ Nouvelle visite').click();
+  await p.getByText('Nouvelle visite', { exact: true }).click();
   await fill('Nom', 'M. Hoarau');
   await fill('Code postal', '75011');
   await p.getByText('Zone : Hexagone (20 %)').waitFor();
   await p.getByText('Enregistrer la visite').click();
-  await p.getByText('Visite du ').waitFor();
+  await tab(p, 'Infos').waitFor();
   await p.goBack();
   await p.getByText('M. Hoarau').filter({ visible: true }).first().waitFor();
   console.log('5. HORS LIGNE : 2e visite créée');
-  console.log('   bandeau :', await p.getByText(/Hors ligne/).innerText());
+  console.log('   bandeau :', await p.locator('[aria-label^="Synchronisation : "]').filter({ visible: true }).first().getAttribute('aria-label'));
   await p.screenshot({ path: 'tests/out-accueil-hors-ligne.png' });
   console.log('Erreurs :', errors.length ? errors : 'aucune');
   await b.close();

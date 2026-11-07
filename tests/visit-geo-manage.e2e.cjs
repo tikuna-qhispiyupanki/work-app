@@ -1,7 +1,7 @@
 // Test de bout en bout : « Me localiser », adresse IGN, image du plan, modification, statut « faite », suppression.
 // Nécessite l'accès réseau à data.geopf.fr. Lancer : npx serve -s dist -l 8081, puis npm run test:geo
 const { chromium, devices } = require('playwright');
-const { login } = require('./helpers/login.cjs');
+const { login, tab, menu, syncState } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
 
@@ -23,9 +23,9 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
 
   await p.goto(APP, { waitUntil: 'load' });
   await login(p);
-  await p.getByText('+ Nouvelle visite').click();
+  await p.getByText('Nouvelle visite', { exact: true }).click();
   await fill('Nom', 'M. Grondin');
-  await p.getByText('📍 Me localiser').click();
+  await p.getByText('Me localiser').click();
   await p.getByText(/Adresse la plus proche/).waitFor({ timeout: 20000 });
   const address = await p.getByLabel('Adresse', { exact: true }).inputValue();
   const cp = await p.getByLabel('Code postal', { exact: true }).inputValue();
@@ -40,26 +40,28 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   console.log('2. carte IGN affichée (plan)');
 
   await p.getByText('Enregistrer la visite').click();
+  await tab(p, 'Arbres').click();
   await p.getByAltText('Plan du chantier').waitFor({ timeout: 20000 });
   const size = await p.getByAltText('Plan du chantier').evaluate((img) => `${img.naturalWidth}×${img.naturalHeight}`);
   console.log(`3. visite enregistrée avec l'image du plan (${size})`);
   await p.screenshot({ path: 'tests/out-visite-plan.png', fullPage: true });
 
-  await p.getByText('✓ Marquer la visite comme faite').click();
-  await p.getByText('✓ Faite').waitFor();
+  await tab(p, 'Infos').click();
+  await p.getByText('Marquer la visite comme faite').click();
+  await p.getByText('Faite', { exact: true }).waitFor();
   console.log('4. visite marquée « faite »');
 
-  await p.getByText('Modifier', { exact: true }).click();
+  await menu(p, 'Actions de la visite', 'Modifier la visite');
   await fill('Téléphone', '0693 11 22 33');
   await p.getByLabel('Date de la visite – heure').fill('16:30');
   await p.getByText("L'image du plan déjà enregistrée sera gardée", { exact: false }).waitFor();
   await p.getByText('Enregistrer les modifications').click();
-  await p.getByText('📞 0693 11 22 33').waitFor();
+  await p.getByText('Tél. 0693 11 22 33').waitFor();
   await p.getByText(/à 16:30/).waitFor();
   console.log('5. modification enregistrée (téléphone, heure 16:30), plan conservé');
 
-  await p.getByText('Supprimer', { exact: true }).click();
-  await p.getByText('+ Nouvelle visite').waitFor();
+  await menu(p, 'Actions de la visite', 'Supprimer la visite');
+  await p.getByText('Nouvelle visite', { exact: true }).waitFor();
   await p.waitForTimeout(500);
   const stillThere = await p.getByText('M. Grondin', { exact: true }).filter({ visible: true }).count();
   const inDom = await p.getByText('M. Grondin').count();

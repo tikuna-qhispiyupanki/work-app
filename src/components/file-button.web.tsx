@@ -1,9 +1,10 @@
 import { useRef } from 'react';
 
+import type { IconName } from '@/components/icon';
 import { SecondaryButton } from '@/components/ui';
 
 // Bouton qui ouvre le sélecteur de fichiers (iPhone : « Fichiers », iCloud Drive ; ordinateur : explorateur).
-export function FileButton({ label, accept, onFile, disabled }: { label: string; accept: string; onFile: (f: File) => void; disabled?: boolean }) {
+export function FileButton({ label, accept, onFile, disabled, icon }: { label: string; accept: string; onFile: (f: File) => void; disabled?: boolean; icon?: IconName }) {
   const input = useRef<HTMLInputElement>(null);
   return (
     <>
@@ -19,7 +20,7 @@ export function FileButton({ label, accept, onFile, disabled }: { label: string;
           if (f) onFile(f);
         }}
       />
-      <SecondaryButton label={label} onPress={() => input.current?.click()} disabled={disabled} />
+      <SecondaryButton label={label} icon={icon} onPress={() => input.current?.click()} disabled={disabled} />
     </>
   );
 }

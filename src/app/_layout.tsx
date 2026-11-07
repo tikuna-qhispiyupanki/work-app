@@ -1,11 +1,11 @@
 import { PowerSyncContext } from '@powersync/react';
-import { router, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/auth/session';
-import { SyncStatus } from '@/components/sync-status';
+import { SyncPill } from '@/components/sync-pill';
 import { Colors } from '@/constants/theme';
 import { db, requestPersistentStorage } from '@/db/database';
 import { registerServiceWorker } from '@/pwa/register';
@@ -55,21 +55,19 @@ function AppStack() {
           headerStyle: { backgroundColor: Colors.primary },
           headerTintColor: Colors.primaryText,
           contentStyle: { backgroundColor: Colors.background },
+          headerBackTitle: 'Retour',
+          headerRight: ready ? () => <SyncPill /> : undefined,
         }}
       >
         <Stack.Protected guard={ready}>
-          <Stack.Screen
-            name="index"
-            options={{ title: 'Arboject', headerTitle: () => <BrandTitle />, headerRight: () => <AccountButton /> }}
-          />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Arboject' }} />
+          <Stack.Screen name="synchro" options={{ title: 'Synchronisation' }} />
           <Stack.Screen name="visites/nouvelle" options={{ title: 'Nouvelle visite' }} />
           <Stack.Screen name="visites/[id]/index" options={{ title: 'Visite' }} />
           <Stack.Screen name="visites/[id]/modifier" options={{ title: 'Modifier la visite' }} />
-          <Stack.Screen name="clients/index" options={{ title: 'Carnet clients' }} />
           <Stack.Screen name="clients/[id]/index" options={{ title: 'Client' }} />
           <Stack.Screen name="clients/[id]/modifier" options={{ title: 'Modifier le client' }} />
           <Stack.Screen name="clients/nouveau" options={{ title: 'Nouveau client' }} />
-          <Stack.Screen name="compte" options={{ title: 'Mon compte' }} />
           <Stack.Screen name="photos/[id]" options={{ title: 'Photo' }} />
           <Stack.Screen name="grille" options={{ title: 'Grille de prix' }} />
           <Stack.Screen name="arbres/[id]" options={{ title: 'Fiche arbre' }} />
@@ -85,7 +83,6 @@ function AppStack() {
         </Stack.Protected>
         <Stack.Screen name="mot-de-passe" options={{ title: 'Nouveau mot de passe' }} />
       </Stack>
-      {ready ? <SyncStatus /> : null}
     </>
   );
 }
@@ -101,13 +98,5 @@ function BrandTitle() {
       />
       <Text style={{ color: Colors.primaryText, fontSize: 20, fontWeight: '600' }}>Arboject</Text>
     </View>
-  );
-}
-
-function AccountButton() {
-  return (
-    <Pressable onPress={() => router.push('/compte')} accessibilityRole="button" accessibilityLabel="Mon compte" style={{ padding: 8 }}>
-      <Text style={{ color: Colors.primaryText, fontSize: 22 }}>👤</Text>
-    </Pressable>
   );
 }

@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/ui": "~58.0.27",
+    "@expo/vector-icons": "^15.1.1",
     "@journeyapps/wa-sqlite": "^2.0.10",
     "@powersync/common": "^2.5.0",
     "@powersync/react": "^2.2.0",

@@ -2,6 +2,7 @@
 // Utilise un compte de test temporaire : E2E_EMAIL / E2E_PASSWORD (variables d'environnement).
 // Lancer : npx serve -s dist -l 8081, puis E2E_EMAIL=... E2E_PASSWORD=... npm run test:auth
 const { chromium, devices } = require('playwright');
+const { tab, syncState } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const EMAIL = process.env.E2E_EMAIL;
 const PASSWORD = process.env.E2E_PASSWORD;
@@ -49,14 +50,14 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   await field('Ton prénom et ton nom').fill('Testeur Automatique');
   await p.screenshot({ path: 'tests/out-entreprise.png' });
   await vis(p.getByText('Créer mon entreprise')).click();
-  await vis(p.getByText('+ Nouvelle visite')).waitFor({ timeout: 15000 });
+  await vis(p.getByText('Nouvelle visite', { exact: true })).waitFor({ timeout: 15000 });
   console.log("4. connexion OK → entreprise créée → accueil");
 
   // 5. Une visite créée appartient à la nouvelle entreprise
-  await p.getByText('+ Nouvelle visite').click();
+  await p.getByText('Nouvelle visite', { exact: true }).click();
   await field('Nom').fill('Client test connexion');
   await vis(p.getByText('Enregistrer la visite')).click();
-  await vis(p.getByText('📒 Fiche client')).waitFor();
+  await vis(p.getByText(/^Fiche client/)).waitFor();
   console.log('5. visite créée une fois connecté');
 
   // 6. Hors-ligne : l'application s'ouvre directement, sans redemander la connexion
@@ -69,21 +70,21 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   console.log("6. HORS LIGNE : l'application s'ouvre connectée, avec la visite");
   // 6 bis. Déconnexion refusée tant qu'une modification n'est pas envoyée (sinon elle serait perdue)
   await vis(p.getByText('Client test connexion')).click();
-  await vis(p.getByText('✓ Marquer la visite comme faite')).click();
-  await vis(p.getByText('✓ Faite')).waitFor();
+  await vis(p.getByText('Marquer la visite comme faite')).click();
+  await vis(p.getByText('Faite', { exact: true })).waitFor();
   await p.goBack();
-  await vis(p.getByLabel('Mon compte')).click();
+  await tab(p, 'Plus').click();
   await vis(p.getByText('Se déconnecter', { exact: true })).click();
   await vis(p.getByText(/Déconnexion impossible pour l'instant/)).waitFor({ timeout: 15000 });
   console.log('6 bis. HORS LIGNE avec une modification en attente : déconnexion refusée (rien de perdu)');
   await ctx.setOffline(false);
-  await vis(p.getByText('✓ Tout est envoyé au serveur.')).waitFor({ timeout: 45000 });
+  await syncState(p, /Tout est envoyé/);
   await p.goBack();
 
   // 7. Mon compte → déconnexion
-  await vis(p.getByLabel('Mon compte')).click();
+  await tab(p, 'Plus').click();
   await vis(p.getByText('Élagage Test E2E')).waitFor();
-  await vis(p.getByText('Mon rôle : Gérant')).waitFor();
+  await vis(p.getByText(/· Gérant$/)).waitFor();
   await p.screenshot({ path: 'tests/out-compte.png' });
   await vis(p.getByText('Se déconnecter', { exact: true })).click();
   await vis(p.getByText('Se connecter', { exact: true })).waitFor({ timeout: 15000 });
@@ -93,7 +94,7 @@ const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypas
   await field('E-mail').fill(EMAIL);
   await field('Mot de passe').fill(PASSWORD);
   await vis(p.getByText('Se connecter', { exact: true })).click();
-  await vis(p.getByText('+ Nouvelle visite')).waitFor({ timeout: 15000 });
+  await vis(p.getByText('Nouvelle visite', { exact: true })).waitFor({ timeout: 15000 });
   console.log("8. reconnexion : retour direct à l'accueil, entreprise retrouvée");
 
   console.log('Erreurs :', errors.length ? errors : 'aucune');

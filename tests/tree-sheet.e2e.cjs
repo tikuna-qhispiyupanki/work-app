@@ -3,7 +3,7 @@
 const { chromium, devices } = require('playwright');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { login } = require('./helpers/login.cjs');
+const { login, tab, menu, syncState } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const XLSX = path.join(__dirname, '..', 'docs', 'Grille_tarifaire_elagage_Reunion_2026.xlsx');
 const PHOTO = path.join(__dirname, 'fixtures', 'photo-4000x3000-gps.jpg');
@@ -25,12 +25,12 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
   await p.goto(APP, { waitUntil: 'load' });
   await login(p);
   // Grille de prix (si absente)
-  await vis(p.getByLabel('Mon compte')).click();
-  await vis(p.getByText('💶 Grille de prix')).click();
+  await tab(p, 'Plus').click();
+  await vis(p.getByText('Grille de prix', { exact: true })).click();
   const none = vis(p.getByText('Aucune grille de prix'));
   await Promise.race([none.waitFor({ timeout: 20000 }), vis(p.getByText('Paramètres', { exact: true })).waitFor({ timeout: 20000 })]);
   // Toujours repartir d'une grille neuve (un test précédent a pu changer « mon prix »).
-  const input = (await none.isVisible()) ? '📄 Importer mon fichier Excel' : '📄 Importer une nouvelle version (Excel)';
+  const input = (await none.isVisible()) ? 'Importer mon fichier Excel' : 'Importer une nouvelle version (Excel)';
   await p.locator(`input[aria-label="${input}"]`).setInputFiles(XLSX);
   await vis(p.getByText(/^(Enregistrer cette grille|Remplacer la grille actuelle)$/)).click();
   await vis(p.getByText('Paramètres', { exact: true })).waitFor();
@@ -38,10 +38,11 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
   await p.goto(APP, { waitUntil: 'load' });
 
   // 1. Visite sans localisation (comme hors-ligne) → arbre ajouté sans carte
-  await vis(p.getByText('+ Nouvelle visite')).click();
+  await vis(p.getByText('Nouvelle visite', { exact: true })).click();
   await field('Nom').fill('Mme Arbre');
   await vis(p.getByText('Enregistrer la visite')).click();
-  await vis(p.getByText('➕ Ajouter un arbre sans carte (hors-ligne)')).click();
+  await tab(p, 'Arbres').click();
+  await vis(p.getByText('Ajouter un arbre sans carte (hors-ligne)')).click();
   await vis(p.getByText('Arbre n° 1')).waitFor();
   console.log('1. arbre n° 1 ajouté sans carte → fiche ouverte');
 

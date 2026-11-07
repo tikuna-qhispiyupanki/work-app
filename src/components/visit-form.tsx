@@ -204,10 +204,10 @@ export function VisitForm({ initial, hasPlan, submitLabel, onSubmit }: Props) {
       <Card title="Lieu du chantier">
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <SecondaryButton label="📍 Me localiser" onPress={locateMe} disabled={locating} />
+            <SecondaryButton label="Me localiser" icon="locate-outline" onPress={locateMe} disabled={locating} />
           </View>
           <View style={{ flex: 1 }}>
-            <SecondaryButton label="🔎 Situer l'adresse" onPress={locateAddress} disabled={locating} />
+            <SecondaryButton label="Situer l'adresse" icon="search-outline" onPress={locateAddress} disabled={locating} />
           </View>
         </View>
         {geoMessage ? <Muted>{geoMessage}</Muted> : null}

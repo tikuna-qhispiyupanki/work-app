@@ -42,7 +42,7 @@ export default function CompanySheetScreen() {
         )}
         {canEdit ? (
           <FileButton
-            label={c.logo_photo_id ? '🖼 Changer le logo' : '🖼 Choisir le logo'}
+            label={c.logo_photo_id ? 'Changer le logo' : 'Choisir le logo'} icon="image-outline"
             accept="image/*"
             onFile={async (f) => {
               await setCompanyLogo(f);

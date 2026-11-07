@@ -35,14 +35,14 @@ export function VisitSketches({ visitId }: { visitId: string }) {
       )}
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
-          <SecondaryButton label="✏️ Page blanche" onPress={() => open()} />
+          <SecondaryButton label="Page blanche" icon="brush-outline" onPress={() => open()} />
         </View>
         <View style={{ flex: 1 }}>
-          <SecondaryButton label="✏️ Sur le plan" onPress={() => plan && open(plan.id)} disabled={!plan} />
+          <SecondaryButton label="Sur le plan" icon="brush-outline" onPress={() => plan && open(plan.id)} disabled={!plan} />
         </View>
       </View>
       {!plan ? <Muted>« Sur le plan » : enregistre d&apos;abord l&apos;image du plan (carte de la visite).</Muted> : null}
-      <SecondaryButton label="✏️ Sur une photo de la visite" onPress={() => setChoosePhoto(!choosePhoto)} disabled={!photos.length} />
+      <SecondaryButton label="Sur une photo de la visite" icon="brush-outline" onPress={() => setChoosePhoto(!choosePhoto)} disabled={!photos.length} />
       {choosePhoto ? (
         <View style={styles.grid}>
           {photos.map((p) => (

@@ -123,7 +123,7 @@ export function VisitTrees({ visitId, site }: { visitId: string; site: GeoPoint 
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
             <SecondaryButton
-              label={mode.kind === 'add' ? '✓ Terminer' : '➕ Placer des arbres'}
+              label={mode.kind === 'add' ? 'Terminer' : 'Placer des arbres'} icon={mode.kind === 'add' ? 'checkmark-outline' : 'add-outline'}
               onPress={() => {
                 setMode(mode.kind === 'add' ? { kind: 'idle' } : { kind: 'add' });
                 setMessage(null);
@@ -131,11 +131,11 @@ export function VisitTrees({ visitId, site }: { visitId: string; site: GeoPoint 
             />
           </View>
           <View style={{ flex: 1 }}>
-            <SecondaryButton label="🌳 Arbre à ma position" onPress={addAtMyPosition} disabled={busy} />
+            <SecondaryButton label="Arbre à ma position" icon="leaf-outline" onPress={addAtMyPosition} disabled={busy} />
           </View>
         </View>
       ) : null}
-      <SecondaryButton label="➕ Ajouter un arbre sans carte (hors-ligne)" onPress={addWithoutMap} />
+      <SecondaryButton label="Ajouter un arbre sans carte (hors-ligne)" icon="add-outline" onPress={addWithoutMap} />
       {message ? <Muted>{message}</Muted> : null}
 
       {trees.map((t) => (
@@ -159,7 +159,7 @@ export function VisitTrees({ visitId, site }: { visitId: string; site: GeoPoint 
           </Pressable>
           {editing === t.id ? (
             <>
-              <SecondaryButton label="📋 Fiche complète (mesures, intervention, contraintes, photos)" onPress={() => router.push({ pathname: '/arbres/[id]', params: { id: t.id } })} />
+              <SecondaryButton label="Fiche complète (mesures, intervention, contraintes, photos)" icon="clipboard-outline" onPress={() => router.push({ pathname: '/arbres/[id]', params: { id: t.id } })} />
               <TreeEditor tree={t} onMove={() => setMode({ kind: 'move', treeId: t.id, number: t.number })} onDelete={() => remove(t)} />
             </>
           ) : null}
@@ -174,7 +174,7 @@ export function VisitTrees({ visitId, site }: { visitId: string; site: GeoPoint 
       ) : null}
 
       {placed.length && center ? (
-        <SecondaryButton label="📷 Enregistrer l'image du plan avec les arbres" onPress={savePlan} disabled={busy} />
+        <SecondaryButton label="Enregistrer l'image du plan avec les arbres" icon="camera-outline" onPress={savePlan} disabled={busy} />
       ) : null}
     </Card>
   );
@@ -203,7 +203,7 @@ function TreeEditor({ tree, onMove, onDelete }: { tree: TreeRow; onMove: () => v
       />
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
-          <SecondaryButton label="↔ Déplacer sur la carte" onPress={onMove} />
+          <SecondaryButton label="Déplacer sur la carte" icon="move-outline" onPress={onMove} />
         </View>
         <View style={{ flex: 1 }}>
           <SecondaryButton label="Supprimer" danger onPress={onDelete} />

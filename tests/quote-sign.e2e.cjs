@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { inflateSync } = require('zlib');
 const { execFileSync } = require('child_process');
-const { login } = require('./helpers/login.cjs');
+const { login, tab, menu, syncState } = require('./helpers/login.cjs');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const XLSX = path.join(__dirname, '..', 'docs', 'Grille_tarifaire_elagage_Reunion_2026.xlsx');
 const proxy = process.env.HTTPS_PROXY ? { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } : undefined;
@@ -44,8 +44,8 @@ let page;
   await p.goto(APP, { waitUntil: 'load' });
   await login(p);
   // Fiche entreprise (si vide) et grille
-  await vis(p.getByLabel('Mon compte')).click();
-  await vis(p.getByText('🏢 Fiche entreprise (identité sur les devis)')).click();
+  await tab(p, 'Plus').click();
+  await vis(p.getByText('Fiche entreprise', { exact: true })).click();
   await field("Nom de l'entreprise *").fill('Élagage Test E2E');
   await field('Adresse *').fill('1 rue du Test');
   await field('Code postal *').fill('97400');
@@ -54,7 +54,7 @@ let page;
   await field('SIRET').fill('123 456 789 00011');
   await blur();
   await vis(p.getByText('✓ Fiche suffisante pour émettre des devis.')).waitFor();
-  await p.locator('input[aria-label="🖼 Choisir le logo"]').setInputFiles(path.join(__dirname, 'fixtures', 'logo-transparent.png'));
+  await p.locator('input[aria-label="Choisir le logo"]').setInputFiles(path.join(__dirname, 'fixtures', 'logo-transparent.png'));
   await vis(p.getByAltText("Logo de l'entreprise")).waitFor({ timeout: 20000 });
   const corner = await p.evaluate(async () => {
     const img = [...document.images].find((i) => i.alt === "Logo de l'entreprise");
@@ -66,38 +66,41 @@ let page;
   console.log(`0. logo choisi (PNG transparent) → coin de l'image : rgb(${corner.join(', ')}) ${corner.every((v) => v > 240) ? '(fond blanc ✓)' : '(PAS BLANC)'}`);
   if (!corner.every((v) => v > 240)) throw new Error('fond du logo incorrect');
   await p.goBack();
-  await vis(p.getByText('💶 Grille de prix')).click();
+  await vis(p.getByText('Grille de prix', { exact: true })).click();
   const none = vis(p.getByText('Aucune grille de prix'));
   await Promise.race([none.waitFor({ timeout: 20000 }), vis(p.getByText('Paramètres', { exact: true })).waitFor({ timeout: 20000 })]);
   if (await none.isVisible()) {
-    await p.locator('input[aria-label="📄 Importer mon fichier Excel"]').setInputFiles(XLSX);
+    await p.locator('input[aria-label="Importer mon fichier Excel"]').setInputFiles(XLSX);
     await vis(p.getByText('Enregistrer cette grille')).click();
     await vis(p.getByText('Paramètres', { exact: true })).waitFor();
   }
 
   // Visite : 1 arbre → devis
   await p.goto(APP, { waitUntil: 'load' });
-  await vis(p.getByText('+ Nouvelle visite')).click();
+  await vis(p.getByText('Nouvelle visite', { exact: true })).click();
   await field('Nom').fill('M. Signature');
   await vis(p.getByText('Enregistrer la visite')).click();
-  await vis(p.getByText('➕ Ajouter un arbre sans carte (hors-ligne)')).click();
+  await tab(p, 'Arbres').click();
+  await vis(p.getByText('Ajouter un arbre sans carte (hors-ligne)')).click();
   await field('Nom ou essence').fill('Filao');
   await vis(p.getByText("Choisir l'intervention")).click();
   await vis(p.getByText('Taille de palmier / cocotier', { exact: true })).click();
   await blur();
   await p.goBack();
-  await vis(p.getByText('📄 Créer le devis')).click();
+  await tab(p, 'Devis').click();
+  await vis(p.getByText('Créer le devis')).click();
   await vis(p.getByText('Détail (2 lignes)')).waitFor();
 
   // 1. Déplacement offert
-  await p.getByRole('switch', { name: '🎁 Offrir' }).filter({ visible: true }).last().click();
+  await p.getByRole('button', { name: /^Modifier la ligne / }).filter({ visible: true }).last().click();
+  await p.getByRole('switch', { name: 'Offrir' }).filter({ visible: true }).last().click();
   await vis(p.getByText(/^Offert \(valeur 45\s€ HT\)$/)).waitFor();
   await vis(p.getByText(/Geste commercial : 45\s€ HT offerts/)).waitFor();
   await vis(p.getByText(/^177\s€$/)).waitFor();
   console.log('1. déplacement offert : hors total (177 €), « Geste commercial : 45 € HT offerts »');
 
   // 2. Finalisation puis signature au doigt
-  await vis(p.getByText('✓ Finaliser le devis')).click();
+  await vis(p.getByText('Finaliser le devis')).click();
   await vis(p.getByText(/^Devis D-\d{4}-\d{4}$/)).waitFor({ timeout: 15000 });
   const number = (await vis(p.getByText(/^Devis D-\d{4}-\d{4}$/)).innerText()).replace('Devis ', '');
   await vis(p.getByText('✍️ Signature du client')).waitFor();
@@ -109,7 +112,7 @@ let page;
   await p.mouse.down();
   for (let i = 0; i <= 20; i++) await p.mouse.move(box.x + 20 + i * 12, box.y + box.height * (0.5 + 0.25 * Math.sin(i / 2)));
   await p.mouse.up();
-  await vis(p.getByText('✍️ Valider la signature (Bon pour accord)')).click();
+  await vis(p.getByText('Valider la signature (Bon pour accord)')).click();
   await vis(p.getByText('✓ Signé par le client')).waitFor({ timeout: 15000 });
   await vis(p.getByText(/par Jean Signature\./)).waitFor();
   await p.screenshot({ path: 'tests/out-devis-signe.png', fullPage: true });
@@ -123,7 +126,7 @@ let page;
   console.log('   serveur :', JSON.stringify(r[0]));
 
   // 3. PDF du devis signé
-  const [download] = await Promise.all([p.waitForEvent('download', { timeout: 20000 }), vis(p.getByText('📄 PDF du devis')).click()]);
+  const [download] = await Promise.all([p.waitForEvent('download', { timeout: 20000 }), vis(p.getByText('PDF du devis')).click()]);
   const file = path.join(__dirname, 'out-devis-signe.pdf');
   await download.saveAs(file);
   const txt = pdfText(fs.readFileSync(file));

@@ -2,7 +2,7 @@
 // Deux « téléphones » (deux navigateurs séparés) connectés au même compte de test.
 // Lancer via : bash scripts/e2e.sh sync
 const { chromium, devices } = require('playwright');
-const { login } = require('./helpers/login.cjs');
+const { login, tab, menu, syncState } = require('./helpers/login.cjs');
 const { execFileSync } = require('child_process');
 const APP = process.argv[2] || 'http://localhost:8081/?sw=1';
 const REF = 'qtfhiehlhowbuweykyyu';
@@ -21,19 +21,19 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
   };
   const vis = (p, loc) => loc.filter({ visible: true }).first();
   const field = (p, label) => vis(p, p.getByLabel(label, { exact: true }));
-  const allSent = (p) => vis(p, p.getByText('✓ Tout est envoyé au serveur.')).waitFor({ timeout: 45000 });
+  const allSent = (p) => syncState(p, /Tout est envoyé/);
 
   // 1. Téléphone A : une visite avec un arbre, puis envoi au serveur
   const A = await phone();
   await A.goto(APP, { waitUntil: 'load' });
   await login(A);
-  await A.getByText('+ Nouvelle visite').click();
+  await A.getByText('Nouvelle visite', { exact: true }).click();
   await field(A, 'Nom').fill('Mme Sync');
   await field(A, 'Adresse').fill('3 rue des Tamarins');
   await field(A, 'Code postal').fill('97400');
   await field(A, 'Commune').fill('Saint-Denis');
   await vis(A, A.getByText('Enregistrer la visite')).click();
-  await vis(A, A.getByText('📒 Fiche client')).waitFor();
+  await vis(A, A.getByText(/^Fiche client/)).waitFor();
   await allSent(A);
   const rows = sql(`select c.name, v.site_city, v.created_by::text = '${'eeeeeeee-0000-4000-8000-00000000e2e0'}' as auteur_ok,
     (select name from companies where id = v.company_id) as entreprise
@@ -60,19 +60,19 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
 
   // 4. B modifie la visite de Mme Sync → A reçoit la modification
   await vis(B, B.getByText('Mme Sync')).click();
-  await vis(B, B.getByText('Modifier', { exact: true })).click();
+  await menu(B, 'Actions de la visite', 'Modifier la visite');
   await field(B, 'Téléphone').fill('0692 99 88 77');
   await vis(B, B.getByText('Enregistrer les modifications')).click();
-  await vis(B, B.getByText('📞 0692 99 88 77')).waitFor();
+  await vis(B, B.getByText('Tél. 0692 99 88 77')).waitFor();
   await allSent(B);
   await vis(A, A.getByText('Mme Sync')).click();
-  await vis(A, A.getByText('📞 0692 99 88 77')).waitFor({ timeout: 45000 });
+  await vis(A, A.getByText('Tél. 0692 99 88 77')).waitFor({ timeout: 45000 });
   console.log('4. B modifie le téléphone → A reçoit la modification');
 
   // 5. Hors-ligne sur A : la modification attend, puis part au retour du réseau
   await A.context().setOffline(true);
-  await vis(A, A.getByText('✓ Marquer la visite comme faite')).click();
-  await vis(A, A.getByText(/à envoyer au retour du réseau/)).waitFor({ timeout: 15000 });
+  await vis(A, A.getByText('Marquer la visite comme faite')).click();
+  await syncState(A, /à envoyer au retour du réseau/, 15000);
   console.log('5. A hors-ligne : la modification attend (« à envoyer au retour du réseau »)');
   await A.context().setOffline(false);
   await allSent(A);
@@ -83,7 +83,7 @@ const sql = (q) => JSON.parse(execFileSync('python3', ['scripts/supabase-sql.py'
   // 6. Déconnexion de A : données retirées du téléphone, puis récupérées à la reconnexion
   await A.goto(APP, { waitUntil: 'load' });
   await allSent(A);
-  await vis(A, A.getByLabel('Mon compte')).click();
+  await tab(A, 'Plus').click();
   await vis(A, A.getByText('Se déconnecter', { exact: true })).click();
   await vis(A, A.getByText('Se connecter', { exact: true })).waitFor({ timeout: 20000 });
   await login(A);
