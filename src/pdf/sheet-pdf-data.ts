@@ -19,7 +19,7 @@ async function photoBytes(companyId: string, id: string | null): Promise<{ jpeg:
 export async function sheetPdf(sheetId: string): Promise<{ data: ArrayBuffer; fileName: string }> {
   const s = await db.get<SheetRow>(SHEET_SQL, [sheetId]);
   const job = await db.get<{ title: string | null }>('SELECT title FROM jobs WHERE id = ?', [s.job_id]);
-  const company = (await db.getOptional<{ name: string; address: string; postal_code: string; city: string; phone: string; siret: string }>('SELECT * FROM companies WHERE id = ?', [s.company_id])) ?? {};
+  const company = (await db.getOptional<{ name: string; address: string; postal_code: string; city: string; phone: string; siret: string; logo_photo_id: string | null }>('SELECT * FROM companies WHERE id = ?', [s.company_id])) ?? {};
   const team = await db.getAll<JobMemberRow>(JOB_TEAM_SQL, [s.job_id]);
   const acks = await db.getAll<AckRow>(SHEET_ACKS_SQL, [sheetId]);
   const data = buildSheetPdf({
@@ -29,6 +29,7 @@ export async function sheetPdf(sheetId: string): Promise<{ data: ArrayBuffer; fi
     team: team.map((t) => ({ name: t.name, role: ROLE_ON_JOB_LABEL[t.role_on_job] })),
     sketch: await photoBytes(s.company_id, s.sketch_photo_id),
     signatureJpeg: (await photoBytes(s.company_id, s.signature_photo_id))?.jpeg ?? null,
+    logo: await photoBytes(s.company_id, (company as { logo_photo_id?: string | null }).logo_photo_id ?? null),
     acks: await Promise.all(acks.map(async (a) => ({ name: a.name, acknowledged_at: a.acknowledged_at, signatureJpeg: (await photoBytes(s.company_id, a.signature_photo_id))?.jpeg ?? null }))),
   });
   const who = (job.title ?? 'chantier').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '');

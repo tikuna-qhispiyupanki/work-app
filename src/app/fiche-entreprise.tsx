@@ -6,8 +6,10 @@ import { useAuth } from '@/auth/session';
 import { FileButton } from '@/components/file-button';
 import { LocalImage } from '@/components/local-image';
 import { NumberField } from '@/components/number-field';
-import { Card, Field, Muted } from '@/components/ui';
+import { confirmAction } from '@/components/confirm';
+import { Card, Field, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
+import { clearSheetDefaults } from '@/db/jobs';
 import { COMPANY_SQL, CompanyFields, CompanyRow, missingCompanyFields, setCompanyLogo, updateCompany } from '@/db/quotes';
 import { kickUploader } from '@/sync/uploader';
 import { FRANCHISE_MENTION } from '@/domain/quote-build';
@@ -97,6 +99,24 @@ export default function CompanySheetScreen() {
         <NumberField label="Durée de validité" unit="jours" value={c.quote_validity_days ?? 30} onCommit={(v) => canEdit && v != null && v >= 1 && save({ quote_validity_days: Math.round(v) })} allowEmpty={false} />
         <TextF label="Conditions de paiement" value={c.quote_payment_terms} onCommit={(v) => save({ quote_payment_terms: v })} disabled={!canEdit} multiline />
         <NumberField label="Acompte demandé à la signature" unit="%" value={(c.quote_deposit_bp ?? 0) / 100} onCommit={(v) => canEdit && save({ quote_deposit_bp: Math.round((v ?? 0) * 100) })} />
+      </Card>
+      <Card title="Fiche d'intervention : mes textes">
+        {(c as CompanyRow & { sheet_defaults?: string | null }).sheet_defaults ? (
+          <>
+            <Muted>Tes textes (équipements, risques habituels, prévention, conduite à tenir, secours) sont repris sur chaque nouvelle fiche.</Muted>
+            {canEdit ? (
+              <SecondaryButton
+                label="Revenir aux textes proposés par Arboject"
+                icon="refresh-outline"
+                onPress={async () => {
+                  if (await confirmAction('Revenir aux textes proposés ?', 'Les prochaines fiches reprendront les textes d’Arboject. Les fiches déjà faites ne changent pas.', 'Revenir')) await clearSheetDefaults(c.id);
+                }}
+              />
+            ) : null}
+          </>
+        ) : (
+          <Muted>Les nouvelles fiches reprennent les textes proposés par Arboject. Adapte une fiche à ta façon de travailler, puis touche « Garder ces textes pour mes prochaines fiches ».</Muted>
+        )}
       </Card>
     </ScrollView>
   );

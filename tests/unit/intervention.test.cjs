@@ -50,3 +50,30 @@ test('PDF de la fiche : 6 rubriques, signatures, conservation, responsabilité',
     assert.ok(s.includes(m), `manque : ${m}`);
   }
 });
+
+test('urgences les plus proches (La Réunion, sans réseau)', () => {
+  const { nearestHospital, emergencyBlock } = require('../../src/domain/emergency.ts');
+  assert.match(nearestHospital({ lat: -21.0533, lng: 55.2306 }).name, /CHOR/); // Saint-Gilles → Saint-Paul
+  assert.match(nearestHospital({ lat: -21.3393, lng: 55.4781 }).name, /CHU Sud/); // Saint-Pierre
+  assert.match(nearestHospital({ lat: -20.88, lng: 55.45 }).name, /Félix-Guyon/); // Saint-Denis
+  assert.match(nearestHospital({ lat: -21.03, lng: 55.71 }).name, /GHER/); // Saint-Benoît
+  assert.equal(nearestHospital({ lat: 48.85, lng: 2.35 }), null); // hexagone : à compléter
+  const b = emergencyBlock({ address: '4 Rue des Barracudas, 97434 Saint-Paul', lat: -21.0533, lng: 55.2306 });
+  assert.match(b, /SAMU 15/);
+  assert.match(b, /CHOR.*≈ 11 km/);
+  assert.match(b, /GPS -21\.05330, 55\.23060/);
+});
+
+test('mes textes par défaut repris sur une nouvelle fiche (lignes électriques ajoutées si le chantier en a)', () => {
+  const p = iv.prefillSheet({ siteAddress: 'x', lat: null, lng: null, works: ['Élagage'], nearPowerLines: true, start: null, end: null, usesRopes: true });
+  const d = { prevention: 'Mes mesures', accident_procedure: 'Ma conduite', rescue: 'Mes secours', risks: JSON.stringify({ checked: ['chute_hauteur'], other: 'Chien' }) };
+  const f = iv.applyDefaults(p, d, true);
+  assert.equal(f.accident_procedure, 'Ma conduite');
+  assert.equal(f.rescue, 'Mes secours');
+  const r = JSON.parse(f.risks);
+  assert.deepEqual(r.checked, ['chute_hauteur', 'lignes_electriques']);
+  assert.equal(r.other, 'Chien');
+  assert.match(f.prevention, /^Mes mesures\n• Lignes électriques/);
+  assert.equal(f.works, '• Élagage'); // le contenu propre au chantier ne change pas
+  assert.equal(iv.applyDefaults(p, null, true), p);
+});

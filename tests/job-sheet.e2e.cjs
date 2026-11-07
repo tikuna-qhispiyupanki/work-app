@@ -145,7 +145,8 @@ function pdfText(buf) {
   const powerChecked = await vis(p.getByRole('checkbox', { name: 'Lignes électriques à proximité', exact: true })).getAttribute('aria-checked');
   if (powerChecked !== 'true') throw new Error('risque « lignes électriques » pas coché : ' + powerChecked + ' ' + (await vis(p.getByRole('checkbox', { name: 'Lignes électriques à proximité', exact: true })).evaluate((e) => e.outerHTML.slice(0, 300))));
   await vis(p.getByText(/Jean Chef \(Chef d'équipe\)/)).waitFor();
-  console.log('3. fiche pré-remplie : adresse + GPS, travaux du devis, image du plan, risque « lignes électriques » coché, intervenants');
+  await p.waitForFunction(() => [...document.querySelectorAll('textarea')].some((e) => /Urgences les plus proches : Centre hospitalier Ouest Réunion – CHOR/.test(e.value)), null, { timeout: 10000 });
+  console.log('3. fiche pré-remplie : adresse + GPS, travaux du devis, image du plan, risque « lignes électriques » coché, intervenants, urgences les plus proches (CHOR, sans réseau)');
   await field('Date de fin').fill(day);
   await vis(p.getByRole('checkbox', { name: 'Insectes (guêpes, frelons), animaux', exact: true })).click();
   await p.waitForFunction(() => document.querySelector('[aria-label="Insectes (guêpes, frelons), animaux"]')?.getAttribute('aria-checked') === 'true', null, { timeout: 10000 });
@@ -156,6 +157,9 @@ function pdfText(buf) {
   await vis(p.getByRole('button', { name: 'Signer la fiche', exact: true })).click();
   await vis(p.getByText(/Version 1 signée le .* par Gérant Test/)).waitFor({ timeout: 15000 });
   console.log("4. fiche signée par le chef d'entreprise (figée, à garder 2 ans)");
+  await vis(p.getByRole('button', { name: 'Garder ces textes pour mes prochaines fiches', exact: true })).click();
+  await vis(p.getByText('Textes gardés : ils seront repris sur tes prochaines fiches.')).waitFor();
+  console.log('   textes gardés comme textes par défaut de l\'entreprise');
 
   // 5. Présentée aux intervenants
   for (const name of ['Jean Chef', 'Lou Sauveteur']) {
@@ -168,11 +172,11 @@ function pdfText(buf) {
   console.log('5. Jean et Lou ont signé pour attester (2/2)');
 
   // 6. PDF sans réseau
-  const [download] = await Promise.all([p.waitForEvent('download', { timeout: 20000 }), vis(p.getByText('PDF de la fiche')).click()]);
+  const [download] = await Promise.all([p.waitForEvent('download', { timeout: 20000 }), vis(p.getByText('Envoyer la fiche (SMS, WhatsApp, e-mail…)')).click()]);
   const file = path.join(__dirname, 'out-fiche-intervention.pdf');
   await download.saveAs(file);
   const txt = pdfText(fs.readFileSync(file));
-  const must = ["FICHE D'INTERVENTION", '1. Emplacement', '2. Croquis', 'Lignes électriques à proximité', 'Insectes', '5. Conduite', '6. Organisation des secours', 'par Gérant Test', 'Jean Chef', 'Lou Sauveteur', '(2 ans)'];
+  const must = ["FICHE D'INTERVENTION", '1. Emplacement', '2. Croquis', 'Lignes électriques à proximité', 'Insectes', '5. Conduite', '6. Organisation des secours', 'par Gérant Test', 'Jean Chef', 'Lou Sauveteur', '(2 ans)', 'CHOR'];
   const missing = must.filter((m) => !txt.includes(m));
   const images = (fs.readFileSync(file).toString('latin1').match(/\/Subtype \/Image/g) || []).length;
   if (missing.length || images < 3) throw new Error(`PDF incomplet : ${missing.join(', ')} ; images ${images}`);
@@ -194,6 +198,8 @@ function pdfText(buf) {
     'chantier et fiche'
   );
   console.log('7. retour du réseau → serveur :', JSON.stringify(srv[0]));
+  const def = sql(`select sheet_defaults like '%Inspection avant la mont%' as ok from companies where id in ${CO}`);
+  console.log('   textes par défaut sur le serveur :', JSON.stringify(def[0]));
   if (srv[0].chantiers !== 1 || !srv[0].meme_id || srv[0].fiche !== 'signee' || srv[0].equipe !== 2) throw new Error('données serveur incorrectes');
 
   console.log('Erreurs :', errors.length ? errors : 'aucune');

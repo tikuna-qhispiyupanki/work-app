@@ -117,3 +117,25 @@ export function retainUntil(signedAt: Date): string {
   d.setFullYear(d.getFullYear() + 2);
   return d.toISOString().slice(0, 10);
 }
+
+// Textes par défaut d'une entreprise (enregistrés depuis une fiche qu'elle a adaptée).
+export type SheetDefaults = { equipment?: string; risks?: string; prevention?: string; accident_procedure?: string; rescue?: string };
+export const DEFAULT_KEYS = ['equipment', 'risks', 'prevention', 'accident_procedure', 'rescue'] as const;
+
+// Applique les textes de l'entreprise sur le pré-remplissage. Les risques propres au chantier
+// (lignes électriques signalées à la visite) restent cochés en plus des risques habituels.
+export function applyDefaults<T extends Record<string, string | null>>(prefill: T, defaults: SheetDefaults | null, nearPowerLines: boolean): T {
+  if (!defaults) return prefill;
+  const out: Record<string, string | null> = { ...prefill };
+  for (const k of DEFAULT_KEYS) if (defaults[k]) out[k] = defaults[k] ?? null;
+  if (defaults.risks && nearPowerLines) {
+    const r = parseJson<RisksValue>(defaults.risks, { checked: [], other: '' });
+    if (!r.checked.includes('lignes_electriques')) {
+      r.checked.push('lignes_electriques');
+      out.risks = JSON.stringify(r);
+      const pl = RISKS.find((x) => x.key === 'lignes_electriques')!;
+      out.prevention = [out.prevention, `• ${pl.label} : ${pl.prevention}`].filter(Boolean).join('\n');
+    }
+  }
+  return out as T;
+}

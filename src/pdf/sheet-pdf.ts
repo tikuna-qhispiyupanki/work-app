@@ -19,6 +19,7 @@ export type SheetPdfInput = {
   sketch?: { jpeg: Uint8Array; width: number; height: number } | null;
   signatureJpeg?: Uint8Array | null;
   acks: { name: string; acknowledged_at: string; signatureJpeg?: Uint8Array | null }[];
+  logo?: { jpeg: Uint8Array; width: number; height: number } | null; // logo de l'entreprise
 };
 
 const GREEN: [number, number, number] = [14, 84, 80];
@@ -74,7 +75,13 @@ export function buildSheetPdf(input: SheetPdfInput): ArrayBuffer {
     y += 6;
   };
 
-  // En-tête
+  // En-tête (logo en haut à gauche, comme sur le devis)
+  if (input.logo) {
+    const ratio = input.logo.width / input.logo.height;
+    const h = Math.min(18, 40 / ratio);
+    doc.addImage(input.logo.jpeg, 'JPEG', L, 8, h * ratio, h);
+    y = 8 + h + 6;
+  }
   text("FICHE D'INTERVENTION", L, y, { size: 16, bold: true, color: GREEN });
   text(`Version ${s.version}${s.status === 'brouillon' ? ' - BROUILLON (non signée)' : ''}`, R, y, { size: 10, bold: true, align: 'right', color: s.status === 'brouillon' ? [178, 34, 34] : GREEN });
   y += 5.5;

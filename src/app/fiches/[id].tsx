@@ -12,11 +12,12 @@ import { SignaturePad, SignaturePadHandle } from '@/components/signature-pad';
 import { Button, Card, Field, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
 import {
-  acknowledgeSheet, AckRow, createSheet, JOB_TEAM_SQL, JobMemberRow, ROLE_ON_JOB_LABEL, SHEET_ACKS_SQL, SHEET_SQL, SheetField, SheetRow, signSheet, updateSheet,
+  acknowledgeSheet, AckRow, createSheet, saveSheetDefaults, JOB_TEAM_SQL, JobMemberRow, ROLE_ON_JOB_LABEL, SHEET_ACKS_SQL, SHEET_SQL, SheetField, SheetRow, signSheet, updateSheet,
 } from '@/db/jobs';
 import { toDate } from '@/domain/dates';
 import { EQUIPMENT, missingSheetFields, parseJson, preventionFor, RESPONSIBILITY, RISKS } from '@/domain/intervention';
 import type { EquipmentValue, RiskKey, RisksValue } from '@/domain/intervention';
+import { emergencyBlock } from '@/domain/emergency';
 import { quickPosition } from '@/domain/geo';
 import { shareFile } from '@/pdf/share';
 import { sheetPdf } from '@/pdf/sheet-pdf-data';
@@ -36,6 +37,10 @@ export default function SheetScreen() {
   const { data: sketches } = useQuery<Sketch>(SKETCHES_SQL, [s?.job_id ?? '']);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const { company } = useAuth();
+  const { data: jobs } = useQuery<{ site_address: string | null; site_lat: number | null; site_lng: number | null }>('SELECT site_address, site_lat, site_lng FROM jobs WHERE id = ?', [s?.job_id ?? '']);
+  const job = jobs[0];
   if (isLoading) return <Muted>Chargement…</Muted>;
   if (!s) return <Muted>Fiche introuvable.</Muted>;
   const draft = s.status === 'brouillon';
@@ -154,13 +159,33 @@ export default function SheetScreen() {
       <Card title="6. Organisation des secours">
         <TextBlock key={`Organisation des secours:${s.rescue ?? ""}`} label="Organisation des secours" value={s.rescue} editable={draft} onSave={set('rescue')} />
         <TextBlock key={`Numéros utiles, hôpital, point de rendez-vous des secours:${s.emergency_contacts ?? ""}`} label="Numéros utiles, hôpital, point de rendez-vous des secours" value={s.emergency_contacts} editable={draft} onSave={set('emergency_contacts')} />
+        {draft && job?.site_lat != null ? (
+          <SecondaryButton
+            label="Proposer les urgences les plus proches"
+            icon="medkit-outline"
+            onPress={() => set('emergency_contacts')(emergencyBlock({ address: job.site_address, lat: job.site_lat, lng: job.site_lng }))}
+          />
+        ) : null}
+        <Muted>Urgences proposées d&apos;après le GPS du chantier (liste des hôpitaux publics de La Réunion) : vérifie l&apos;itinéraire avant le chantier.</Muted>
       </Card>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {company?.role === 'gerant' ? (
+        <SecondaryButton
+          label="Garder ces textes pour mes prochaines fiches"
+          icon="bookmark-outline"
+          onPress={async () => {
+            if (!(await confirmAction('Garder ces textes ?', 'Équipements, risques habituels, mesures de prévention, conduite à tenir et secours seront repris sur chaque nouvelle fiche. Tu pourras revenir aux textes proposés depuis la fiche entreprise.', 'Garder'))) return;
+            await saveSheetDefaults(s.id);
+            setSaved(true);
+          }}
+        />
+      ) : null}
+      {saved ? <Text style={styles.ok}>Textes gardés : ils seront repris sur tes prochaines fiches.</Text> : null}
       {draft ? <SignCard sheet={s} missing={missing} onError={setError} /> : null}
       {s.status === 'signee' ? <AcksCard sheet={s} acks={acks} team={team} onError={setError} /> : null}
 
-      <SecondaryButton label={busy ? 'Préparation du PDF…' : `PDF de la fiche${draft ? ' (brouillon)' : ''}`} icon="document-text-outline" disabled={busy} onPress={pdf} />
+      <SecondaryButton label={busy ? 'Préparation du PDF…' : draft ? 'PDF de la fiche (brouillon)' : 'Envoyer la fiche (SMS, WhatsApp, e-mail…)'} icon={draft ? 'document-text-outline' : 'share-outline'} disabled={busy} onPress={pdf} />
       {s.status === 'signee' ? (
         <SecondaryButton
           label="Corriger : nouvelle version"
@@ -285,6 +310,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 15, fontWeight: '600', color: Colors.text },
   warning: { fontSize: 15, color: Colors.warning, fontWeight: '500' },
   error: { fontSize: 15, color: Colors.danger },
+  ok: { fontSize: 15, color: Colors.primary, fontWeight: '600' },
   row: { flexDirection: 'row', gap: Spacing.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { borderRadius: 999, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 11, paddingVertical: 6, backgroundColor: Colors.card },

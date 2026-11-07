@@ -1,6 +1,8 @@
 import { currentIds } from '@/auth/current';
 import type { CompressedImage } from '@/files/image';
-import { missingSheetFields, prefillSheet, retainUntil } from '@/domain/intervention';
+import { emergencyBlock } from '@/domain/emergency';
+import { applyDefaults, DEFAULT_KEYS, missingSheetFields, prefillSheet, retainUntil } from '@/domain/intervention';
+import type { SheetDefaults } from '@/domain/intervention';
 import type { Transaction } from '@powersync/web';
 
 import { db, newId, nowIso } from './database';
@@ -137,7 +139,18 @@ export async function createSheet(jobId: string): Promise<string> {
       end: job.planned_end ?? job.planned_start,
       usesRopes: true,
     });
-    fields = { ...p, sketch_photo_id: await visitSketch(job.visit_id) };
+    const company = await db.getOptional<{ sheet_defaults: string | null }>('SELECT sheet_defaults FROM companies WHERE id = ?', [companyId]);
+    let defaults: SheetDefaults | null = null;
+    try {
+      defaults = company?.sheet_defaults ? (JSON.parse(company.sheet_defaults) as SheetDefaults) : null;
+    } catch {
+      defaults = null;
+    }
+    fields = {
+      ...applyDefaults(p, defaults, !!job.near_power_lines),
+      emergency_contacts: emergencyBlock({ address: job.site_address, lat: job.site_lat, lng: job.site_lng }),
+      sketch_photo_id: await visitSketch(job.visit_id),
+    };
   }
   await db.execute(
     `INSERT INTO intervention_sheets (id, company_id, created_at, updated_at, created_by, job_id, version, status, ${SHEET_FIELDS.join(', ')})
@@ -187,4 +200,15 @@ export async function acknowledgeSheet(sheetId: string, member: { id: string | n
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [newId(), companyId, now, now, userId, sheetId, member.id, member.name.trim(), now, photoId]
   );
+}
+
+// « Garder ces textes pour mes prochaines fiches » (gérant) : équipements, risques habituels, prévention, accident, secours.
+export async function saveSheetDefaults(sheetId: string) {
+  const s = await db.get<SheetRow>(SHEET_SQL, [sheetId]);
+  const d: SheetDefaults = Object.fromEntries(DEFAULT_KEYS.map((k) => [k, s[k] ?? undefined]));
+  await db.execute('UPDATE companies SET sheet_defaults = ?, updated_at = ? WHERE id = ?', [JSON.stringify(d), nowIso(), s.company_id]);
+}
+
+export async function clearSheetDefaults(companyId: string) {
+  await db.execute('UPDATE companies SET sheet_defaults = NULL, updated_at = ? WHERE id = ?', [nowIso(), companyId]);
 }

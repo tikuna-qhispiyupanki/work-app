@@ -102,6 +102,7 @@ const photos = new Table(
 // Reçues du serveur uniquement (jamais modifiées sur le téléphone).
 const companies = new Table({
   logo_photo_id: column.text,
+  sheet_defaults: column.text, // textes par défaut de la fiche d'intervention (JSON)
   name: column.text,
   legal_form: column.text,
   insurance_name: column.text,
