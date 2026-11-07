@@ -96,3 +96,22 @@ export async function archiveClient(id: string) {
   const now = nowIso();
   await db.execute('UPDATE clients SET deleted_at = ?, updated_at = ? WHERE id = ?', [now, now, id]);
 }
+
+// Clients du carnet (même retirés : on ne les réimporte pas) pour repérer les doublons à l'import.
+export const CLIENTS_FOR_IMPORT_SQL = 'SELECT name, phone, email, postal_code FROM clients';
+
+// Import d'un fichier : tous les nouveaux clients en une seule écriture (tout ou rien).
+export async function importClients(list: ClientInput[]): Promise<number> {
+  const { companyId, userId } = currentIds();
+  const now = nowIso();
+  await db.writeTransaction(async (tx) => {
+    for (const c of list) {
+      await tx.execute(
+        `INSERT INTO clients (id, company_id, created_at, updated_at, created_by, kind, name, phone, email, address, postal_code, city, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [newId(), companyId, now, now, userId, c.kind, c.name.trim(), c.phone.trim(), c.email.trim(), c.address.trim(), c.postalCode.trim(), c.city.trim(), c.notes.trim()]
+      );
+    }
+  });
+  return list.length;
+}

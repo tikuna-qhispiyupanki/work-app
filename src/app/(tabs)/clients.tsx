@@ -3,7 +3,7 @@ import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, Field, Muted } from '@/components/ui';
+import { Button, Card, Field, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
 import { ClientRow, CLIENTS_SEARCH_SQL } from '@/db/clients';
 
@@ -15,12 +15,19 @@ export default function ClientsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Button label="Nouveau client" icon="person-add-outline" onPress={() => router.push('/clients/nouveau')} />
+      <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+        <View style={{ flex: 1 }}>
+          <Button label="Nouveau client" icon="person-add-outline" onPress={() => router.push('/clients/nouveau')} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <SecondaryButton label="Importer (Excel, CSV)" icon="document-attach-outline" onPress={() => router.push('/clients/import')} />
+        </View>
+      </View>
       <Field label="Rechercher (nom, téléphone, commune)" value={q} onChangeText={setQ} autoCapitalize="none" />
       <Card title={`${clients.length} client${clients.length > 1 ? 's' : ''}`}>
         {isLoading ? <Muted>Chargement…</Muted> : null}
         {!isLoading && clients.length === 0 ? (
-          <Muted>{s ? 'Aucun client trouvé.' : 'Le carnet se remplit tout seul quand tu crées des visites.'}</Muted>
+          <Muted>{s ? 'Aucun client trouvé.' : 'Le carnet se remplit tout seul quand tu crées des visites. Tu peux aussi importer ton fichier de clients (Excel ou CSV).'}</Muted>
         ) : null}
         {clients.map((c) => (
           <Link key={c.id} href={{ pathname: '/clients/[id]', params: { id: c.id } }} asChild>

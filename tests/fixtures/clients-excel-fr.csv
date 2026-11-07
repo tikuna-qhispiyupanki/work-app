@@ -1,0 +1,7 @@
+Nom;Prénom;Société;Portable;Tél. fixe;E-mail;Adresse;Complément;CP;Ville;Remarques
+Payet;Jean;;0692 11 22 33;;jean.payet@exemple.invalid;12 chemin des Filaos;;97434;Saint-Gilles-les-Bains;Chien méchant
+Hoarau;Marie;;;0262 33 44 55;;5 rue des Letchis;Résidence Les Palmiers;97400;Saint-Denis;
+Técher;Paul;Syndic Océan;+262 692 44 55 66;;contact@syndic-ocean.invalid;1 rue du Port;;97420;Le Port;
+Payet;Jean;;06 92 11 22 33;;;;;97434;Saint-Gilles-les-Bains;(doublon dans le fichier)
+;;;0692 55 00 01;;;;;;; sans nom
+Grondin;Lucie;;0692 98 76 54;;;3 impasse des Goyaviers;;97410;Saint-Pierre;

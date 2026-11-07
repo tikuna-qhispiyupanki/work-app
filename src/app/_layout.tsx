@@ -68,6 +68,7 @@ function AppStack() {
           <Stack.Screen name="clients/[id]/index" options={{ title: 'Client' }} />
           <Stack.Screen name="clients/[id]/modifier" options={{ title: 'Modifier le client' }} />
           <Stack.Screen name="clients/nouveau" options={{ title: 'Nouveau client' }} />
+          <Stack.Screen name="clients/import" options={{ title: 'Importer des clients' }} />
           <Stack.Screen name="photos/[id]" options={{ title: 'Photo' }} />
           <Stack.Screen name="grille" options={{ title: 'Grille de prix' }} />
           <Stack.Screen name="arbres/[id]" options={{ title: 'Fiche arbre' }} />
