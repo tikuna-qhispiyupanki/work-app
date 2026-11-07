@@ -17,6 +17,7 @@ cleanup() {
   sql <<SQL >/dev/null
 do \$\$ declare cids uuid[]; begin
   select array_agg(company_id) into cids from public.memberships where user_id = '$UID_TEST';
+  delete from public.price_items where company_id = any(cids); delete from public.price_grids where company_id = any(cids);
   delete from public.photos where company_id = any(cids); delete from public.trees where company_id = any(cids);
   delete from public.visits where company_id = any(cids); delete from public.clients where company_id = any(cids);
   delete from public.memberships where company_id = any(cids); delete from public.companies where id = any(cids);
@@ -41,7 +42,7 @@ echo "Compte de test créé."
 
 status=0
 if [ "${1:-}" = "--debug" ]; then shift; node "$@"; exit $?; fi
-TESTS="${*:-auth offline-visit visit-geo-manage clients-trees sync photos}"
+TESTS="${*:-auth offline-visit visit-geo-manage clients-trees sync photos grid}"
 for t in $TESTS; do
   echo "== $t"
   node "tests/$t.e2e.cjs" 2>&1 | grep -v "agent-proxy\|cdp.expo\|For details" || status=1

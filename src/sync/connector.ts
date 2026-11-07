@@ -7,7 +7,7 @@ import { LOCAL_COMPANY_ID, LOCAL_USER_ID } from '@/db/database';
 
 // Tables que le téléphone a le droit d'envoyer. Les autres (entreprises, membres, profils)
 // sont seulement reçues du serveur.
-const UPLOADABLE = new Set(['clients', 'visits', 'trees', 'photos']);
+const UPLOADABLE = new Set(['clients', 'visits', 'trees', 'photos', 'price_grids', 'price_items']);
 
 // Erreurs définitives (refus des règles d'accès, donnée invalide) : réessayer ne servirait à rien
 // et bloquerait toute la file d'envoi. On les met de côté pour les montrer, puis on continue.

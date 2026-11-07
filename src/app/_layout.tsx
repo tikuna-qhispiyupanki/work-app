@@ -70,6 +70,7 @@ function AppStack() {
           <Stack.Screen name="clients/[id]/modifier" options={{ title: 'Modifier le client' }} />
           <Stack.Screen name="compte" options={{ title: 'Mon compte' }} />
           <Stack.Screen name="photos/[id]" options={{ title: 'Photo' }} />
+          <Stack.Screen name="grille" options={{ title: 'Grille de prix' }} />
         </Stack.Protected>
         <Stack.Protected guard={!signedIn}>
           <Stack.Screen name="connexion" options={{ headerShown: false }} />

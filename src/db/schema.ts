@@ -111,6 +111,45 @@ const memberships = new Table({
 });
 const profiles = new Table({ full_name: column.text, phone: column.text });
 
+// Grille de prix (importée depuis le fichier Excel ; une seule grille active par entreprise).
+const price_grids = new Table({
+  ...common,
+  name: column.text,
+  source_file: column.text,
+  imported_at: column.text,
+  is_active: column.integer,
+  rate_climber_cents: column.integer,
+  rate_ground_cents: column.integer,
+  travel_flat_cents: column.integer,
+  waste_per_m3_cents: column.integer,
+  waste_cost_per_m3_cents: column.integer,
+  vat_hexagone_bp: column.integer,
+  coef_bp: column.integer,
+  surcharge_retention_bp: column.integer,
+  surcharge_big_trunk_bp: column.integer,
+  surcharge_urgent_bp: column.integer,
+});
+const price_items = new Table(
+  {
+    ...common,
+    grid_id: column.text,
+    sort_order: column.integer,
+    label: column.text,
+    category: column.text,
+    unit: column.text,
+    min_cents: column.integer,
+    max_cents: column.integer,
+    source_basis: column.text,
+    suggested_price_cents: column.integer,
+    my_price_cents: column.integer,
+    height_min_m: column.real,
+    height_max_m: column.real,
+    second_source: column.text,
+    source: column.text,
+  },
+  { indexes: { by_grid: ['grid_id', 'sort_order'] } }
+);
+
 // File d'envoi des fichiers photo (seulement sur ce téléphone, jamais synchronisée).
 const upload_queue = new Table(
   {
@@ -123,7 +162,9 @@ const upload_queue = new Table(
   { localOnly: true }
 );
 
-export const AppSchema = new Schema({ clients, visits, trees, photos, companies, memberships, profiles, upload_queue });
+export const AppSchema = new Schema({
+  clients, visits, trees, photos, companies, memberships, profiles, price_grids, price_items, upload_queue,
+});
 
 export type Database = (typeof AppSchema)['types'];
 export type ClientRecord = Database['clients'];

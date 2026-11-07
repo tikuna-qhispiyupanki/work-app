@@ -33,7 +33,7 @@ Documents de référence :
    - 2c-2. Connexion (e-mail + mot de passe, confirmation par e-mail), création de l'entreprise, « Mon compte » ✅ (validé sur iPhone)
    - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur) ✅ (à valider sur iPhone) : test à deux téléphones (`bash scripts/e2e.sh sync`) réussi — envoi, réception, modification croisée, hors-ligne puis retour du réseau, déconnexion/reconnexion. Instance Production : `https://6aeeb4c94d7433c80999f9fd.powersync.journeyapps.com` (Client Auth en mode manuel : JWKS `https://qtfhiehlhowbuweykyyu.supabase.co/auth/v1/.well-known/jwks.json`, audience `authenticated`). L'instance Development n'est pas utilisée.
    - 2d. Photos : compression (1 600 px, JPEG 0,7, sans EXIF), miniature 320 px, option HD 3 200 px, file d'envoi avec reprise, stockage privé par entreprise, téléchargement par lien signé sur un autre appareil ✅ (à valider sur iPhone)
-3. Grille de prix : import du fichier Excel
+3. Grille de prix : import du fichier Excel ← **en cours** : tables `price_grids` / `price_items` (migration 4, tests RLS 17-19), lecture du .xlsx (`src/domain/xlsx.ts`, `fflate`), recalcul identique à Excel (`src/domain/pricing.ts`, `grid-import.ts`, tests unitaires sur le vrai fichier), écran « Grille de prix » (Mon compte). Reste : redéploiement des Sync Streams par le fondateur, puis `bash scripts/e2e.sh grid` étape 4 (autre appareil).
 4. Visite et devis
 5. Fiche d'intervention et chantier
 6. Fil du chantier et rapport client
@@ -152,4 +152,7 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Code et noms de tables en anglais. Textes de l'interface en français.
 - Les migrations SQL sont versionnées dans `supabase/migrations/`, une par changement. Chaque table métier a sa politique RLS dans la même migration.
 - Calcul du devis : fonction pure, testée par des tests unitaires qui reprennent l'exemple du calculateur Excel.
+- Tests unitaires : `npm run test:unit` (Node, sans compilation : `tests/unit/ts-resolve.mjs` résout « @/ » et les imports sans extension). Dans les fichiers de `src/domain/`, importer les types avec `import type`.
+- Grille de prix : le prix conseillé est **recalculé** depuis les données brutes du fichier (fourchette, base HT/TTC, coefficient) avec la formule Excel, et comparé au résultat d'Excel (écart signalé). Une nouvelle importation crée une nouvelle version active ; l'ancienne reste en archive. La grille de départ est copiée de `docs/` vers `public/` à la construction.
+- Après tout ajout de table synchronisée : mettre à jour `powersync/sync-config.yaml` (`npm run check:sync`), puis demander au fondateur de le recoller dans PowerSync (Sync Streams → Deploy).
 - Ne jamais mettre de clé secrète dans le dépôt.

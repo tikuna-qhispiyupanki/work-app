@@ -9,6 +9,8 @@ import { join, relative } from 'node:path';
 const BASE = (process.env.EXPO_PUBLIC_BASE_PATH || '').replace(/\/$/, '');
 const run = (cmd) => execSync(cmd, { stdio: 'inherit' });
 run('npx powersync-web copy-assets -o public');
+// Grille de prix de départ (La Réunion 2026), proposée au premier lancement : copie du fichier de docs/.
+copyFileSync('docs/Grille_tarifaire_elagage_Reunion_2026.xlsx', 'public/grille-tarifaire-reunion-2026.xlsx');
 run('npx expo export --platform web --clear');
 
 const dist = 'dist';

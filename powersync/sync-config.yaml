@@ -26,3 +26,5 @@ streams:
       - SELECT * FROM visits WHERE company_id IN mes_entreprises
       - SELECT * FROM trees WHERE company_id IN mes_entreprises
       - SELECT * FROM photos WHERE company_id IN mes_entreprises
+      - SELECT * FROM price_grids WHERE company_id IN mes_entreprises
+      - SELECT * FROM price_items WHERE company_id IN mes_entreprises

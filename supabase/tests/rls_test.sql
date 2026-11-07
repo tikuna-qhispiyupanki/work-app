@@ -123,6 +123,31 @@ begin
   results := results || format(E'\n16. Technicien de A voit %s photo(s) (attendu 0, pas encore de chantier) : %s', n, case when n = 0 then 'OK' else 'ÉCHEC' end);
   execute 'reset role';
 
+  -- 17-19. Grille de prix : le gérant écrit, le chef d'équipe lit seulement, l'autre entreprise ne voit rien
+  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  insert into public.price_grids (id, company_id, name) values ('aaaaaaaa-4444-4000-8000-00000000000a', ca, 'Grille A');
+  insert into public.price_items (id, company_id, grid_id, label, suggested_price_cents) values (gen_random_uuid(), ca, 'aaaaaaaa-4444-4000-8000-00000000000a', 'Élagage', 31300);
+  insert into public.memberships (company_id, user_id, role) values (ca, ub, 'chef_equipe');
+  execute 'reset role';
+  perform set_config('request.jwt.claims', json_build_object('sub', ub, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.price_items where company_id = ca;
+  begin
+    update public.price_items set my_price_cents = 1 where company_id = ca;
+    get diagnostics ok = row_count;
+  exception when others then ok := false;
+  end;
+  results := results || format(E'\n17. Chef d''équipe de A lit la grille (%s ligne) : %s', n, case when n = 1 then 'OK' else 'ÉCHEC' end);
+  results := results || format(E'\n18. Chef d''équipe de A modifie un prix : %s', case when not ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
+  execute 'reset role';
+  delete from public.memberships where company_id = ca and user_id = ub;
+  perform set_config('request.jwt.claims', json_build_object('sub', ub, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.price_grids where company_id = ca;
+  results := results || format(E'\n19. B (autre entreprise) voit %s grille de A (attendu 0) : %s', n, case when n = 0 then 'OK' else 'ÉCHEC' end);
+  execute 'reset role';
+
   -- 12. Un visiteur non connecté ne voit rien
   perform set_config('request.jwt.claims', '', true);
   execute 'set local role anon';
