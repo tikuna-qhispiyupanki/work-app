@@ -9,6 +9,7 @@ import { SyncStatus } from '@/components/sync-status';
 import { Colors } from '@/constants/theme';
 import { db, requestPersistentStorage } from '@/db/database';
 import { registerServiceWorker } from '@/pwa/register';
+import { hideSplash } from '@/pwa/splash';
 
 export default function RootLayout() {
   const [error, setError] = useState<string | null>(null);
@@ -38,12 +39,11 @@ export default function RootLayout() {
 // connecté sans entreprise → création de l'entreprise ; sinon → l'application.
 function AppStack() {
   const { status, company } = useAuth();
+  useEffect(() => {
+    if (status !== 'loading') hideSplash(); // application prête : l'écran de démarrage s'efface
+  }, [status]);
   if (status === 'loading') {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: Colors.textSecondary, fontSize: 16 }}>Ouverture…</Text>
-      </View>
-    );
+    return <View style={{ flex: 1, backgroundColor: Colors.brandBackground }} />;
   }
   const signedIn = status === 'signedIn';
   const ready = signedIn && company !== null;

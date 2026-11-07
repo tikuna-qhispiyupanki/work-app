@@ -18,6 +18,7 @@ Documents de référence :
 - Commits petits, en français, poussés sur GitHub (`tikuna-qhispiyupanki/work-app`) à chaque étape validée.
 
 ## Identité visuelle
+- Écran de démarrage animé (logo qui apparaît puis se balance, nom, barre de chargement) : `scripts/splash.html`, injecté dans `index.html` à la construction (visible avant le chargement du code), retiré par `src/pwa/splash.ts` quand l'application est prête (900 ms minimum). Respecte « Réduire les animations ».
 - Logo : arbre en facettes avec un grimpeur encordé. Source : `assets/brand/logo-source.jpg` ; version nettoyée, sans le texte parasite : `assets/brand/logo.png`. Icônes générées dans `public/icons/` et `assets/images/`.
 - Couleurs : principale `#0E5450` (bleu-vert du logo), fond beige du logo `#E2DFD3`, fond des écrans `#F4F2EA`. Définies dans `src/constants/theme.ts`.
 
@@ -37,7 +38,7 @@ Documents de référence :
 4. Visite et devis ← **en cours**
    - 4a. Fiche arbre complète (mesures, intervention de la grille avec suggestion selon la hauteur, quantité, contraintes, heures et m³, photos de l'arbre, estimation), arbre ajoutable sans carte (hors-ligne), estimation de la visite ✅ (validé) — migration 5, moteur `src/domain/quote-calc.ts` (exemple du calculateur Excel au centime près), `tree-estimate.ts`, écran `src/app/arbres/[id].tsx`, test `tree-sheet`.
    - 4a bis. Zoom « loupe » jusqu'au niveau 21 (IGN s'arrête à 19 : agrandissement ×2/×4), carte des arbres plus haute ; fiches clients (création directe, particulier/professionnel, appeler/SMS/e-mail/itinéraire, retrait du carnet) ✅ (à valider) — test `clients-manage`.
-   - 4b. Devis ← **en cours** : migration 6 (`quotes`, `quote_lines`, `quote_counters`, `reserve_quote_numbers`, verrouillage par déclencheurs après finalisation ; tests RLS 20-25), `src/domain/quote-build.ts` (= calculateur Excel), `src/db/quotes.ts`, réserve de numéros hors-ligne (`src/sync/quote-numbers.ts`, table locale `quote_number_pool`), écrans « Devis » et « Fiche entreprise ». Reste : redéploiement des Sync Streams par le fondateur (sinon les devis disparaissent du téléphone après envoi), puis `bash scripts/e2e.sh quote` étape 6.
+   - 4b. Devis ✅ (à valider, test `quote` complet, numérotation hors-ligne comprise) : migration 6 (`quotes`, `quote_lines`, `quote_counters`, `reserve_quote_numbers`, verrouillage par déclencheurs après finalisation ; tests RLS 20-25), `src/domain/quote-build.ts` (= calculateur Excel), `src/db/quotes.ts`, réserve de numéros hors-ligne (`src/sync/quote-numbers.ts`, table locale `quote_number_pool`), écrans « Devis » et « Fiche entreprise ».
    - 4c. Signature du client, verrouillage, PDF
    - 4d. Croquis (main levée sur page blanche ou sur photo)
 5. Fiche d'intervention et chantier

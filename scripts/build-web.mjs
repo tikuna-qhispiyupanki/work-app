@@ -47,6 +47,10 @@ const head = [
 const indexPath = join(dist, 'index.html');
 let html = readFileSync(indexPath, 'utf8');
 html = html.replace('<html lang="en">', '<html lang="fr">').replace('</head>', head + '</head>');
+// Écran de démarrage animé, affiché avant même le chargement de l'application.
+const splash = readFileSync('scripts/splash.html', 'utf8').replaceAll('__BASE__', BASE);
+html = html.replace(/<body([^>]*)>/, (m) => `${m}${splash}`);
+if (!html.includes('arboject-splash')) throw new Error("Écran de démarrage non injecté dans index.html");
 writeFileSync(indexPath, html);
 // GitHub Pages n'a pas de « page par défaut » : 404.html = l'application, pour les liens directs.
 copyFileSync(indexPath, join(dist, '404.html'));
