@@ -7,6 +7,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/auth/session';
 import { confirmAction } from '@/components/confirm';
 import { NumberField } from '@/components/number-field';
+import { QuoteCrew } from '@/components/quote-crew';
 import { QuoteSign } from '@/components/quote-sign';
 import { Button, Card, Field, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
@@ -113,6 +114,8 @@ export default function QuoteScreen() {
         {offeredCents ? <Text style={styles.gift}>Geste commercial : {euros(offeredCents)} HT offerts</Text> : null}
         {q.deposit_bp ? <Muted>Acompte à la signature : {percent(q.deposit_bp)} soit {euros(Math.round((q.total_ttc_cents * q.deposit_bp) / 10000))}</Muted> : null}
       </Card>
+
+      {active?.role !== 'technicien' ? <QuoteCrew quoteId={q.id} subtotalCents={q.subtotal_ht_cents} lines={lines} /> : null}
 
       <Card title="Conditions">
         <Muted>Devis gratuit · {q.payment_terms}</Muted>

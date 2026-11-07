@@ -157,6 +157,14 @@ export async function copyQuote(sourceId: string): Promise<string> {
           l.retention, l.big_trunk, l.urgent, l.surcharge_bp, l.total_ht_cents, l.offered ? 1 : 0, l.note]
       );
     }
+    // Équipe prévue (interne) recopiée aussi
+    const crew = await tx.getAll<{ member_id: string; hours: number }>('SELECT member_id, hours FROM quote_crew WHERE quote_id = ? AND deleted_at IS NULL', [sourceId]);
+    for (const c of crew) {
+      await tx.execute(
+        `INSERT INTO quote_crew (id, company_id, created_at, updated_at, created_by, quote_id, member_id, hours) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [newId(), companyId, now, now, userId, id, c.member_id, c.hours]
+      );
+    }
   });
   return id;
 }

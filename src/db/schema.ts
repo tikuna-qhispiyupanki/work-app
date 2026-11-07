@@ -170,6 +170,40 @@ const price_items = new Table(
 );
 
 // Devis et leurs lignes (montants en centimes).
+// Mon équipe (étape 5a). Le coût horaire est dans une table à part, que seuls le gérant et le bureau reçoivent.
+const team_members = new Table(
+  {
+    ...common,
+    name: column.text,
+    trade: column.text, // 'grimpeur' | 'sol' | 'polyvalent' | 'autre'
+    phone: column.text,
+    user_id: column.text,
+    active: column.integer,
+    notes: column.text,
+  },
+  { indexes: { by_company: ['company_id'] } }
+);
+
+const team_member_costs = new Table(
+  {
+    ...common,
+    member_id: column.text,
+    hourly_cost_cents: column.integer,
+  },
+  { indexes: { by_member: ['member_id'] } }
+);
+
+// Qui est prévu sur un devis, et combien d'heures (pour la marge : interne, jamais montré au client).
+const quote_crew = new Table(
+  {
+    ...common,
+    quote_id: column.text,
+    member_id: column.text,
+    hours: column.real,
+  },
+  { indexes: { by_quote: ['quote_id'] } }
+);
+
 // Demandes de signature à distance (lien personnel envoyé au client). La réponse du client
 // (nom, date, IP, empreinte, image de signature) n'est écrite que par le serveur.
 const quote_sign_requests = new Table(
@@ -260,7 +294,7 @@ const upload_queue = new Table(
 );
 
 export const AppSchema = new Schema({
-  clients, visits, trees, photos, companies, memberships, profiles, price_grids, price_items, quotes, quote_lines, quote_sign_requests,
+  clients, visits, trees, photos, companies, memberships, profiles, price_grids, price_items, quotes, quote_lines, quote_sign_requests, team_members, team_member_costs, quote_crew,
   quote_number_pool, upload_queue,
 });
 

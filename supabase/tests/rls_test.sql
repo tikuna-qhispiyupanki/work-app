@@ -14,7 +14,9 @@ declare
   ok boolean;
   tok text := 'tok_' || repeat('x', 44); -- lien de signature de test
   j jsonb;
+  j_n int;
   q2 uuid := 'aaaaaaaa-5555-4000-8000-00000000000b';
+  m_a uuid := 'aaaaaaaa-6666-4000-8000-00000000000a'; -- équipier de A
 begin
   insert into auth.users (id, email, aud, role) values
     (ua, 'test-a@arboject.invalid', 'authenticated', 'authenticated'),
@@ -253,6 +255,41 @@ begin
   execute 'set local role authenticated';
   select count(*) into n from public.quote_sign_requests where company_id = ca;
   results := results || format(E'\n33. B voit %s lien de signature de A (attendu 0) : %s', n, case when n = 0 then 'OK' else 'ÉCHEC' end);
+  execute 'reset role';
+
+  -- 34-38. Mon équipe et coûts internes
+  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  insert into public.team_members (id, company_id, name, trade) values (m_a, ca, 'Paul Grimpeur', 'grimpeur');
+  insert into public.team_member_costs (id, company_id, member_id, hourly_cost_cents) values (gen_random_uuid(), ca, m_a, 2800);
+  insert into public.quote_crew (id, company_id, quote_id, member_id, hours) values (gen_random_uuid(), ca, q2, m_a, 7);
+  select count(*) into n from public.team_member_costs where member_id = m_a;
+  results := results || format(E'\n34. Gérant de A crée un équipier, son coût horaire et l''équipe d''un devis : %s', case when n = 1 then 'OK' else 'ÉCHEC' end);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', json_build_object('sub', ut, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.team_members where company_id = ca;
+  select count(*) into j_n from public.team_member_costs where company_id = ca;
+  results := results || format(E'\n35. Technicien de A voit %s équipier et %s coût (attendu 1 et 0) : %s', n, j_n, case when n = 1 and j_n = 0 then 'OK' else 'ÉCHEC' end);
+  begin
+    insert into public.team_members (id, company_id, name) values (gen_random_uuid(), ca, 'Intrus');
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n36. Technicien de A ajoute un équipier : %s', case when ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', json_build_object('sub', ub, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.team_members where company_id = ca;
+  select count(*) into j_n from public.quote_crew where company_id = ca;
+  results := results || format(E'\n37. B voit %s équipier et %s ligne d''équipe de A (attendu 0) : %s', n, j_n, case when n = 0 and j_n = 0 then 'OK' else 'ÉCHEC' end);
+  begin
+    insert into public.team_members (id, company_id, name) values ('bbbbbbbb-6666-4000-8000-00000000000b', cb, 'Équipier B');
+    insert into public.quote_crew (id, company_id, quote_id, member_id, hours) values (gen_random_uuid(), cb, q2, m_a, 1);
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n38. B rattache un équipier de A à ses données : %s', case when ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
   execute 'reset role';
 
   -- 12. Un visiteur non connecté ne voit rien

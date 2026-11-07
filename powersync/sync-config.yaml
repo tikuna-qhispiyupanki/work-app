@@ -31,3 +31,20 @@ streams:
       - SELECT * FROM quotes WHERE company_id IN mes_entreprises
       - SELECT * FROM quote_lines WHERE company_id IN mes_entreprises
       - SELECT * FROM quote_sign_requests WHERE company_id IN mes_entreprises
+      - SELECT * FROM quote_crew WHERE company_id IN mes_entreprises
+
+  # Mon équipe (noms et métiers) : tous les membres de l'entreprise, techniciens compris.
+  equipe:
+    auto_subscribe: true
+    with:
+      toutes_mes_entreprises: SELECT company_id FROM memberships WHERE user_id = auth.user_id() AND active = true
+    queries:
+      - SELECT * FROM team_members WHERE company_id IN toutes_mes_entreprises
+
+  # Coûts horaires de l'équipe : donnée sensible, gérant et bureau seulement.
+  direction:
+    auto_subscribe: true
+    with:
+      entreprises_dirigees: SELECT company_id FROM memberships WHERE user_id = auth.user_id() AND active = true AND (role = 'gerant' OR role = 'bureau')
+    queries:
+      - SELECT * FROM team_member_costs WHERE company_id IN entreprises_dirigees

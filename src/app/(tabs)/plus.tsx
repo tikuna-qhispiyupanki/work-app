@@ -35,6 +35,7 @@ export default function MoreScreen() {
             {session?.user.email} · {ROLE_LABEL[company.role]}
           </Muted>
           <MenuRow icon="business-outline" label="Fiche entreprise" detail="Identité, logo, SIRET, TVA, conditions des devis" onPress={() => router.push('/fiche-entreprise')} />
+          <MenuRow icon="people-circle-outline" label="Mon équipe" detail="Grimpeurs, hommes au sol, coût horaire (interne)" onPress={() => router.push('/equipe')} />
           <MenuRow icon="pricetags-outline" label="Grille de prix" detail="Prestations, « mon prix », taux horaires, majorations" onPress={() => router.push('/grille')} />
           <MenuRow icon="cloud-upload-outline" label="Synchronisation" detail="Ce qui reste à envoyer au serveur" onPress={() => router.push('/synchro')} />
         </Card>

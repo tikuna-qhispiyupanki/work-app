@@ -122,6 +122,14 @@ Le carnet clients et l'historique sont calculés à partir des visites (et plus 
 
 > **Numérotation hors-ligne.** Le numéro doit se suivre sans trou. Comme on peut finaliser un devis sans réseau, chaque téléphone **réserve à l'avance un petit bloc de numéros** (par exemple 10) quand il a du réseau. Avec un seul utilisateur, les numéros se suivent parfaitement. À plusieurs téléphones, l'ordre peut légèrement différer de l'ordre chronologique, mais sans trou ni doublon. Point à faire valider par le comptable.
 
+### Équipe et marge (étape 5a, migration 12)
+
+**team_members** : `name`, `trade` (`grimpeur` | `sol` | `polyvalent` | `autre`), `phone`, `user_id` (rempli quand l'équipier aura son compte), `active`, `notes`. Lecture : tout membre de l'entreprise ; écriture : gérant, bureau.
+
+**team_member_costs** : `member_id` (unique), `hourly_cost_cents`. **Gérant et bureau seulement** (lecture comme écriture). Jamais montré au client ni aux équipiers.
+
+**quote_crew** : `quote_id`, `member_id`, `hours`. Équipe prévue sur un devis, pour la marge interne (prix HT − heures × coût horaire − dépôt déchèterie). N'entre ni dans le prix, ni dans le PDF, ni dans la page de signature du client.
+
 ### Chantier et fiche d'intervention
 
 **jobs**, le chantier, créé à la signature du devis :
