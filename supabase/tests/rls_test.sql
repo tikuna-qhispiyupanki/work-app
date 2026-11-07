@@ -95,6 +95,34 @@ begin
   results := results || format(E'\n11. Technicien de A voit son entreprise : %s', case when n = 1 then 'OK' else 'ÉCHEC' end);
   execute 'reset role';
 
+  -- 13-16. Stockage des photos : chacun dans le dossier de son entreprise
+  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  insert into storage.objects (bucket_id, name) values ('photos', ca || '/photo-a.jpg');
+  begin
+    insert into storage.objects (bucket_id, name) values ('photos', cb || '/intrus.jpg');
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n13. A dépose une photo chez B : %s', case when ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
+  begin
+    insert into storage.objects (bucket_id, name) values ('photos', 'pas-un-dossier/x.jpg');
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n14. A dépose une photo hors dossier d''entreprise : %s', case when ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', json_build_object('sub', ub, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from storage.objects where bucket_id = 'photos';
+  results := results || format(E'\n15. B voit %s photo(s) de A (attendu 0) : %s', n, case when n = 0 then 'OK' else 'ÉCHEC' end);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', json_build_object('sub', ut, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from storage.objects where bucket_id = 'photos';
+  results := results || format(E'\n16. Technicien de A voit %s photo(s) (attendu 0, pas encore de chantier) : %s', n, case when n = 0 then 'OK' else 'ÉCHEC' end);
+  execute 'reset role';
+
   -- 12. Un visiteur non connecté ne voit rien
   perform set_config('request.jwt.claims', '', true);
   execute 'set local role anon';

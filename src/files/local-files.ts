@@ -1,6 +1,7 @@
 // Fichiers (images) gardés sur le téléphone, dans IndexedDB.
 // Chaque fichier a la même clé que sa ligne dans la table `photos`.
-// L'envoi vers le serveur (Supabase Storage) arrivera à l'étape 2d.
+// Miniature : clé « <id>_min ». Envoi vers le serveur : src/sync/uploader.ts. Copie locale
+// des photos venues du serveur : même clé (cache).
 
 const DB_NAME = 'arboject-files';
 const STORE = 'files';
@@ -27,3 +28,4 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
 export const saveFile = (id: string, blob: Blob) => run('readwrite', (s) => s.put(blob, id)).then(() => undefined);
 export const readFile = (id: string) => run<Blob | undefined>('readonly', (s) => s.get(id));
 export const deleteFile = (id: string) => run('readwrite', (s) => s.delete(id)).then(() => undefined);
+export const clearFiles = () => run('readwrite', (s) => s.clear()).then(() => undefined);

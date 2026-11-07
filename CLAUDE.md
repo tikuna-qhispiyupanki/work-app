@@ -32,7 +32,7 @@ Documents de référence :
    - 2c-1. Serveur : tables, règles d'accès RLS, 12 tests, audit de sécurité Supabase ✅ (validé)
    - 2c-2. Connexion (e-mail + mot de passe, confirmation par e-mail), création de l'entreprise, « Mon compte » ✅ (validé sur iPhone)
    - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur) ✅ (à valider sur iPhone) : test à deux téléphones (`bash scripts/e2e.sh sync`) réussi — envoi, réception, modification croisée, hors-ligne puis retour du réseau, déconnexion/reconnexion. Instance Production : `https://6aeeb4c94d7433c80999f9fd.powersync.journeyapps.com` (Client Auth en mode manuel : JWKS `https://qtfhiehlhowbuweykyyu.supabase.co/auth/v1/.well-known/jwks.json`, audience `authenticated`). L'instance Development n'est pas utilisée.
-   - 2d. Photos : compression, miniature, file d'envoi
+   - 2d. Photos : compression (1 600 px, JPEG 0,7, sans EXIF), miniature 320 px, option HD 3 200 px, file d'envoi avec reprise, stockage privé par entreprise, téléchargement par lien signé sur un autre appareil ✅ (à valider sur iPhone)
 3. Grille de prix : import du fichier Excel
 4. Visite et devis
 5. Fiche d'intervention et chantier
@@ -51,7 +51,7 @@ Plus tard : V1 bis cordistes (checklist de départ, carnet d'heures, registre EP
 - Serveur : **Supabase** (Postgres, Auth, Storage), région **Paris (eu-west-3)**. Jamais la région « Europe » générique.
   - Projet : `arboject`, réf. `qtfhiehlhowbuweykyyu` (offre gratuite). URL et clé publique : `src/config/supabase.ts`. (L'autre projet du compte, à Londres, n'a rien à voir avec Arboject : ne pas y toucher.)
   - Migrations : `supabase/migrations/`, appliquées dans l'ordre via l'API de gestion Supabase (`POST /v1/projects/<réf>/database/query`). Le jeton `sbp_` du fondateur est enregistré comme secret réseau de l'environnement « work-app » : jamais dans le code. Toujours tester d'abord en local (`supabase/README.md`), puis relancer `supabase/tests/rls_test.sql` et l'audit de sécurité (`/v1/projects/<réf>/advisors/security`) après chaque migration.
-  - Fonctions internes des règles d'accès dans le schéma `private` (non exposé). Seule remarque d'audit acceptée : `public.create_company` appelable par un utilisateur connecté (voulu).
+  - Fonctions internes des règles d'accès dans le schéma `private` (non exposé). Remarques d'audit acceptées : `public.create_company` appelable par un utilisateur connecté (voulu) ; « leaked password protection » (vérification des mots de passe volés), à activer quand l'offre le permettra.
 - Le code serveur reste du Postgres standard et portable : pas de dépendance inutile à des fonctions propres à Supabase, pour pouvoir changer d'hébergeur.
 - Phase de test : uniquement les offres gratuites. Toute dépense doit être validée avant.
 
@@ -72,7 +72,10 @@ Plus tard : V1 bis cordistes (checklist de départ, carnet d'heures, registre EP
 
 ### Photos
 - Compression sur le téléphone : 1 600 px sur le plus grand côté, JPEG qualité 0,7. Miniature de 320 px. Option « haute définition » ponctuelle.
-- File d'envoi en arrière-plan avec reprise après coupure, et option « Wi-Fi seulement ».
+- File d'envoi avec reprise après coupure (`src/sync/uploader.ts`, table locale `upload_queue`, essais espacés jusqu'à 1 h). Version web : l'envoi n'a lieu que quand l'application est ouverte. **Option « Wi-Fi seulement » impossible dans Safari** (le navigateur ne dit pas si on est en Wi-Fi ou en 4G) : elle viendra avec la version App Store.
+- Chemins : `photos/{company_id}/{photo_id}.jpg` et `…_min.jpg` (miniature). Migration `20261107000003_stockage_photos.sql` ; tests 13 à 16 de `rls_test.sql`.
+- Supabase refuse la suppression directe des fichiers en SQL : les tests nettoient par l'API de stockage (`scripts/cleanup-storage.py`, clé d'administration lue à la volée, jamais écrite).
+- Déconnexion refusée tant que des photos attendent l'envoi ; après déconnexion, les fichiers du téléphone sont effacés (ils sont sur le serveur).
 - Bucket privé, avec un dossier par entreprise : `{company_id}/...`. Les photos ne sont consultables que par **liens signés temporaires**.
 - La date, l'heure et le GPS sont gardés **en base**. Les métadonnées (EXIF) sont **retirées** des fichiers partagés avec les clients.
 - GPS enregistré uniquement au moment d'une photo, d'une signature ou d'une checklist. **Jamais de suivi continu.**

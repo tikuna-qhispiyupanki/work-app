@@ -111,7 +111,19 @@ const memberships = new Table({
 });
 const profiles = new Table({ full_name: column.text, phone: column.text });
 
-export const AppSchema = new Schema({ clients, visits, trees, photos, companies, memberships, profiles });
+// File d'envoi des fichiers photo (seulement sur ce téléphone, jamais synchronisée).
+const upload_queue = new Table(
+  {
+    photo_id: column.text,
+    attempts: column.integer,
+    last_error: column.text,
+    next_try_at: column.text,
+    created_at: column.text,
+  },
+  { localOnly: true }
+);
+
+export const AppSchema = new Schema({ clients, visits, trees, photos, companies, memberships, profiles, upload_queue });
 
 export type Database = (typeof AppSchema)['types'];
 export type ClientRecord = Database['clients'];

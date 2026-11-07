@@ -6,6 +6,7 @@ import { addToCalendar } from '@/components/add-to-calendar';
 import { confirmAction } from '@/components/confirm';
 import { LocalImage } from '@/components/local-image';
 import { Button, Card, Muted, SecondaryButton } from '@/components/ui';
+import { VisitPhotos } from '@/components/visit-photos';
 import { VisitTrees } from '@/components/visit-trees';
 import { Colors, Spacing } from '@/constants/theme';
 import { deleteVisit, setVisitStatus, VISIT_DETAIL_SQL, VISIT_PLAN_SQL } from '@/db/visits';
@@ -15,6 +16,7 @@ import { toDate } from '@/domain/dates';
 
 type VisitDetail = {
   id: string;
+  company_id: string;
   client_id: string;
   client_email: string | null;
   visited_at: string;
@@ -36,7 +38,7 @@ type VisitDetail = {
 export default function VisitScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, isLoading } = useQuery<VisitDetail>(VISIT_DETAIL_SQL, [id]);
-  const { data: plans } = useQuery<{ id: string; width: number; height: number }>(VISIT_PLAN_SQL, [id]);
+  const { data: plans } = useQuery<{ id: string; width: number; height: number; storage_path: string | null }>(VISIT_PLAN_SQL, [id]);
   const v = data[0];
   const plan = plans[0];
   const { data: others } = useQuery<{ n: number }>(
@@ -110,10 +112,14 @@ export default function VisitScreen() {
         {v.site_lat != null && v.site_lng != null ? (
           <Muted>Position : {formatPoint({ lat: v.site_lat, lng: v.site_lng, accuracyM: v.site_accuracy_m })}</Muted>
         ) : null}
-        {plan ? <LocalImage fileId={plan.id} alt="Plan du chantier" aspectRatio={plan.width / plan.height} /> : null}
+        {plan ? (
+          <LocalImage fileId={plan.id} alt="Plan du chantier" aspectRatio={plan.width / plan.height} companyId={v.company_id} uploaded={!!plan.storage_path} />
+        ) : null}
         {v.access_notes ? <Text style={styles.text}>Accès : {v.access_notes}</Text> : null}
         {v.near_power_lines ? <Text style={styles.warning}>⚠ Lignes électriques : DT-DICT à faire.</Text> : null}
       </Card>
+
+      <VisitPhotos ownerType="visit" ownerId={v.id} />
 
       <VisitTrees visitId={v.id} site={v.site_lat != null && v.site_lng != null ? { lat: v.site_lat, lng: v.site_lng } : null} />
 
@@ -135,7 +141,7 @@ export default function VisitScreen() {
           <SecondaryButton label="Supprimer" danger onPress={remove} />
         </View>
       </View>
-      <Muted>Fiche détaillée des arbres, croquis, photos et devis : étape 4.</Muted>
+      <Muted>Fiche détaillée des arbres, croquis et devis : étape 4.</Muted>
     </ScrollView>
   );
 }

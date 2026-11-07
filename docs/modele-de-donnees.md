@@ -158,7 +158,7 @@ Une fiche signée n'est plus modifiable. Pour corriger, on crée une nouvelle ve
 
 ### Tables seulement sur le téléphone (jamais envoyées)
 
-**upload_queue**, la file d'envoi des photos : `photo_id`, `local_file`, `local_thumb`, `attempts`, `last_error`, `status` (`en_attente` | `en_cours` | `envoyee`).
+**upload_queue**, la file d'envoi des fichiers photo (table « locale » PowerSync, jamais synchronisée) : `photo_id`, `attempts`, `last_error`, `next_try_at`, `created_at`. Les fichiers eux-mêmes (photo et miniature `<id>_min`) sont dans IndexedDB ; une ligne est retirée de la file quand les deux fichiers sont sur le serveur et que `photos.storage_path` est rempli.
 
 **settings** : `wifi_only_uploads`, entreprise active.
 

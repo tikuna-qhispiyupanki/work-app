@@ -3,7 +3,9 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useState 
 
 import { POWERSYNC_URL } from '@/config/powersync';
 import { db, LOCAL_COMPANY_ID, LOCAL_USER_ID } from '@/db/database';
+import { clearFiles } from '@/files/local-files';
 import { connector } from '@/sync/connector';
+import { pendingUploads, startUploader, stopUploader } from '@/sync/uploader';
 
 import { setCurrentIds } from './current';
 import { supabase } from './supabase';
@@ -62,6 +64,7 @@ async function adoptLocalData(companyId: string, userId: string) {
 // Sans réseau, PowerSync attend et réessaie tout seul.
 let syncStarted = false;
 function startSync() {
+  startUploader(); // envoi des fichiers photo (indépendant de PowerSync)
   if (!POWERSYNC_URL || syncStarted) return;
   syncStarted = true;
   db.connect(connector).catch((e: unknown) => {
@@ -148,8 +151,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut: async () => {
       if (POWERSYNC_URL) {
         const { count } = await db.getUploadQueueStats();
-        if (count > 0) return { ok: false, pending: count };
+        const photos = await pendingUploads();
+        if (count + photos > 0) return { ok: false, pending: count + photos };
+        stopUploader();
         await db.disconnectAndClear();
+        await clearFiles(); // photos du téléphone : elles sont sur le serveur
       }
       // Sans synchronisation configurée : on garde les données (elles n'existent que sur ce téléphone).
       syncStarted = false;

@@ -11,6 +11,9 @@ cd "$(dirname "$0")/.."
 
 sql() { python3 scripts/supabase-sql.py "$REF" -; }
 cleanup() {
+  # Fichiers photo du compte de test : supprimés par l'API de stockage (la base refuse la suppression directe).
+  cos=$(echo "select coalesce(string_agg(company_id::text, ' '), '') as c from public.memberships where user_id = '$UID_TEST'" | sql | python3 -c "import sys,json; print(json.loads(sys.stdin.read().split(' ',1)[1])[0]['c'])")
+  [ -n "$cos" ] && python3 scripts/cleanup-storage.py "$REF" $cos
   sql <<SQL >/dev/null
 do \$\$ declare cids uuid[]; begin
   select array_agg(company_id) into cids from public.memberships where user_id = '$UID_TEST';
@@ -38,7 +41,7 @@ echo "Compte de test créé."
 
 status=0
 if [ "${1:-}" = "--debug" ]; then shift; node "$@"; exit $?; fi
-TESTS="${*:-auth offline-visit visit-geo-manage clients-trees sync}"
+TESTS="${*:-auth offline-visit visit-geo-manage clients-trees sync photos}"
 for t in $TESTS; do
   echo "== $t"
   node "tests/$t.e2e.cjs" 2>&1 | grep -v "agent-proxy\|cdp.expo\|For details" || status=1

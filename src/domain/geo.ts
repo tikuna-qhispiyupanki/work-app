@@ -28,6 +28,25 @@ export function getCurrentPosition(): Promise<GeoPoint> {
   });
 }
 
+// Position rapide pour dater une photo : ne bloque jamais (null si le GPS ne répond pas vite).
+export function quickPosition(timeoutMs = 4000): Promise<GeoPoint | null> {
+  return new Promise((resolve) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return resolve(null);
+    const t = setTimeout(() => resolve(null), timeoutMs + 500);
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        clearTimeout(t);
+        resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracyM: Math.round(p.coords.accuracy) });
+      },
+      () => {
+        clearTimeout(t);
+        resolve(null);
+      },
+      { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 120000 }
+    );
+  });
+}
+
 type GeoFeature = {
   geometry: { coordinates: [number, number] };
   properties: { name?: string; postcode?: string; city?: string; distance?: number; label?: string };

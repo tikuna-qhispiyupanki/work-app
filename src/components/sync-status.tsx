@@ -7,6 +7,7 @@ import { POWERSYNC_URL } from '@/config/powersync';
 import { Colors, Spacing } from '@/constants/theme';
 import { db } from '@/db/database';
 import { readSyncFailures } from '@/sync/connector';
+import { pendingUploads } from '@/sync/uploader';
 
 // Bandeau du bas : réseau, envoi au serveur, et ce qui reste à envoyer.
 export function SyncStatus() {
@@ -14,6 +15,7 @@ export function SyncStatus() {
   const [pending, setPending] = useState<number | null>(null);
   const [online, setOnline] = useState(true);
   const [failures, setFailures] = useState(0);
+  const [photos, setPhotos] = useState(0);
   const insets = useSafeAreaInsets(); // marge pour la barre du bas de l'iPhone
 
   useEffect(() => {
@@ -21,7 +23,11 @@ export function SyncStatus() {
     const refresh = async () => {
       try {
         const stats = await db.getUploadQueueStats();
-        if (alive) setPending(stats.count);
+        const files = await pendingUploads();
+        if (alive) {
+          setPending(stats.count);
+          setPhotos(files);
+        }
       } catch {
         // base pas encore prête
       }
@@ -51,10 +57,15 @@ export function SyncStatus() {
 
   const warn = failures > 0 || refused || (!!pending && !online);
   return (
-    <View style={[styles.bar, warn || (pending ?? 0) > 0 ? styles.pending : null, { paddingBottom: Spacing.sm + insets.bottom }]}>
+    <View style={[styles.bar, warn || (pending ?? 0) > 0 || photos > 0 ? styles.pending : null, { paddingBottom: Spacing.sm + insets.bottom }]}>
       <Text style={styles.text}>
         {online ? '● En ligne' : '○ Hors ligne'} · {text}
       </Text>
+      {photos ? (
+        <Text style={styles.text}>
+          📷 {photos} photo{photos > 1 ? 's' : ''} {online ? 'en cours d’envoi' : 'à envoyer au retour du réseau'}.
+        </Text>
+      ) : null}
       {failures ? (
         <Text style={styles.error}>
           ⚠ {failures} modification{failures > 1 ? 's' : ''} refusée{failures > 1 ? 's' : ''} par le serveur (voir Mon compte).

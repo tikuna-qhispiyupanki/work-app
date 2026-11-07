@@ -1,9 +1,9 @@
 import { vatZoneFromPostalCode } from '@/domain/vat';
-import { deleteFile, saveFile } from '@/files/local-files';
 
 import { currentIds } from '@/auth/current';
 
 import { db, newId, nowIso } from './database';
+import { addPhoto } from './photos';
 
 export type VisitStatus = 'prevue' | 'faite';
 
@@ -113,29 +113,7 @@ export async function deleteVisit(visitId: string): Promise<void> {
 
 // Enregistre l'image du plan. L'ancienne image de plan de la visite est masquée (une seule active).
 export async function savePlanImage(visitId: string, plan: PlanImage, lat: number | null, lng: number | null): Promise<void> {
-  const { companyId: COMPANY, userId: USER } = currentIds();
-  const now = nowIso();
-  const photoId = newId();
-  await saveFile(photoId, plan.blob);
-  try {
-    await db.writeTransaction(async (tx) => {
-      await tx.execute(
-        `UPDATE photos SET deleted_at = ?, updated_at = ?
-         WHERE owner_type = 'visit' AND owner_id = ? AND kind = 'plan' AND deleted_at IS NULL`,
-        [now, now, visitId]
-      );
-      await tx.execute(
-        `INSERT INTO photos (id, company_id, created_at, updated_at, created_by, owner_type, owner_id, kind,
-           mime_type, width, height, bytes, taken_at, lat, lng, include_in_report)
-         VALUES (?, ?, ?, ?, ?, 'visit', ?, 'plan', ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [photoId, COMPANY, now, now, USER, visitId, plan.blob.type, plan.width, plan.height,
-          plan.blob.size, now, lat, lng]
-      );
-    });
-  } catch (e) {
-    await deleteFile(photoId);
-    throw e;
-  }
+  await addPhoto({ ownerType: 'visit', ownerId: visitId, kind: 'plan', image: plan, lat, lng, replaceSameKind: true });
 }
 
 export const VISITS_LIST_SQL = `
@@ -150,6 +128,6 @@ export const VISIT_DETAIL_SQL = `
   WHERE v.id = ? AND v.deleted_at IS NULL`;
 
 export const VISIT_PLAN_SQL = `
-  SELECT id, width, height FROM photos
+  SELECT id, width, height, storage_path FROM photos
   WHERE owner_type = 'visit' AND owner_id = ? AND kind = 'plan' AND deleted_at IS NULL
   ORDER BY created_at DESC LIMIT 1`;
