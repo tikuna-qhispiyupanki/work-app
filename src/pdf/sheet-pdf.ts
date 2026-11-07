@@ -1,7 +1,8 @@
 // PDF de la fiche d'intervention (A4), fabriqué sur le téléphone : fonctionne sans réseau.
-// Sections dans l'ordre du décret 2021-1833 (1° à 6°), puis signature du chef d'entreprise et attestations.
+// Sections dans l'ordre de la notice MSA (éléments 1 à 7), puis signature du chef d'entreprise et attestations.
 import { jsPDF } from 'jspdf';
 
+import { callScript, EMERGENCY_NUMBERS } from '@/domain/emergency';
 import { EQUIPMENT, parseJson, RISKS, RESPONSIBILITY } from '@/domain/intervention';
 import type { EquipmentValue, RisksValue } from '@/domain/intervention';
 
@@ -11,7 +12,7 @@ export type SheetPdfInput = {
   company: { name?: string | null; address?: string | null; postal_code?: string | null; city?: string | null; phone?: string | null; siret?: string | null };
   sheet: {
     version: number; status: string; location: string | null; works: string | null; equipment: string | null; start_date: string | null; end_date: string | null;
-    risks: string | null; prevention: string | null; accident_procedure: string | null; rescue: string | null; emergency_contacts: string | null;
+    risks: string | null; prevention: string | null; accident_procedure: string | null; rescue: string | null; weather_procedure?: string | null; emergency_contacts: string | null;
     signer_name: string | null; signed_at: string | null; retain_until: string | null;
   };
   jobTitle: string;
@@ -34,6 +35,9 @@ const frDateTime = (iso: string) => {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 };
+
+// Le lieu de la fiche contient l'adresse et la ligne GPS : on les garde telles quelles pour le texte d'appel.
+const siteAddress = (location: string | null) => (location ?? '').split('\n').filter(Boolean).join(' – ') || null;
 
 export function buildSheetPdf(input: SheetPdfInput): ArrayBuffer {
   const { sheet: s, company: c } = input;
@@ -128,13 +132,32 @@ export function buildSheetPdf(input: SheetPdfInput): ArrayBuffer {
   section('4. Mesures de prévention');
   para(s.prevention || '-');
   section("5. Conduite à tenir en cas d'accident");
+  // Numéros d'appel d'urgence, en cases de couleur comme sur le modèle MSA
+  ensure(20);
+  const boxes = EMERGENCY_NUMBERS.map((n) => ({ ...n, w: n.sms ? 50 : n.number === '112' ? 36 : 22 }));
+  let x = L + 2;
+  for (const n of boxes) {
+    const rgb = [1, 3, 5].map((i) => parseInt(n.color.slice(i, i + 2), 16)) as [number, number, number];
+    doc.setFillColor(...rgb);
+    doc.roundedRect(x, y - 3, n.w, 14, 1.5, 1.5, 'F');
+    text(n.number, x + n.w / 2, y + 5, { size: 15, bold: true, color: [255, 255, 255], align: 'center' });
+    text(n.sms ? 'SMS sourd / malentendant' : n.label, x + n.w / 2, y + 9.5, { size: 6.5, color: [255, 255, 255], align: 'center' });
+    x += n.w + 3;
+  }
+  y += 16;
   para(s.accident_procedure || '-');
+  ensure(10);
+  text('Au téléphone, dire :', L + 2, y + 1, { size: 9.5, bold: true });
+  y += 5.5;
+  para(callScript({ company: c.name ?? null, address: siteAddress(s.location), lat: null, lng: null }).map((l, i) => `${i + 1}. ${l}`).join('\n'));
   section('6. Organisation des secours');
   para(s.rescue || '-');
   if (s.emergency_contacts) {
     y += 1;
     para(s.emergency_contacts, 9.5, GREEN);
   }
+  section('7. Intempéries et phénomènes météo imprévus');
+  para(s.weather_procedure || '-');
 
   // Signature du chef d'entreprise
   section("Établie, datée et signée par le chef d'entreprise");

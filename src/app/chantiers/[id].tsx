@@ -5,6 +5,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-na
 
 import { useAuth } from '@/auth/session';
 import { DateField } from '@/components/date-field';
+import { EmergencyCard } from '@/components/emergency-card';
 import { Icon } from '@/components/icon';
 import { Segmented } from '@/components/segmented';
 import { Button, Card, Field, Muted, SecondaryButton } from '@/components/ui';
@@ -74,6 +75,7 @@ export default function JobScreen() {
                 {j.visit_id ? <Quick icon="clipboard-outline" label="Visite" onPress={() => router.push({ pathname: '/visites/[id]', params: { id: j.visit_id! } })} /> : null}
               </View>
             </Card>
+            <EmergencyCard company={company?.name ?? null} address={j.site_address} lat={j.site_lat} lng={j.site_lng} />
             <Card title="Avancement">
               <View style={styles.chips}>
                 {STATUSES.map((s) => (

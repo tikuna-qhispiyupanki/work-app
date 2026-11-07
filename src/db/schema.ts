@@ -253,6 +253,7 @@ const intervention_sheets = new Table(
     prevention: column.text,
     accident_procedure: column.text,
     rescue: column.text,
+    weather_procedure: column.text,
     emergency_contacts: column.text,
     signer_name: column.text,
     signed_at: column.text,

@@ -28,12 +28,35 @@ export function nearestHospital(site: { lat: number; lng: number }): (Hospital &
   return HOSPITALS_974.map((h) => ({ ...h, km: distanceKm(site, h) })).sort((a, b) => a.km - b.km)[0];
 }
 
+// Numéros d'appel d'urgence (notice MSA). 114 : par SMS, pour les personnes sourdes, malentendantes ou qui ne peuvent pas parler.
+export const EMERGENCY_NUMBERS = [
+  { number: '15', label: 'SAMU', color: '#E8A21A', sms: false },
+  { number: '18', label: 'Pompiers', color: '#C62828', sms: false },
+  { number: '17', label: 'Police', color: '#283593', sms: false },
+  { number: '112', label: 'Partout en Europe', color: '#2E7D32', sms: false },
+  { number: '114', label: 'SMS : sourd, malentendant, ne peut pas parler', color: '#6A1B9A', sms: true },
+] as const;
+
 // Bloc « numéros utiles » de la fiche d'intervention.
 export function emergencyBlock(site: { address: string | null; lat: number | null; lng: number | null }): string {
   const h = site.lat != null && site.lng != null ? nearestHospital({ lat: site.lat, lng: site.lng }) : null;
   return [
-    'SAMU 15 · Pompiers 18 · Urgences 112',
+    'SAMU 15 · Pompiers 18 · Police 17 · Europe 112 · 114 par SMS (sourd, malentendant, ne peut pas parler)',
     h ? `Urgences les plus proches : ${h.name}, ${h.city} (≈ ${Math.round(h.km)} km à vol d'oiseau)` : 'Urgences les plus proches : ',
-    `Point de rendez-vous des secours : ${site.address ?? ''}${site.lat != null && site.lng != null ? ` – GPS ${site.lat.toFixed(5)}, ${site.lng.toFixed(5)}` : ''}`,
+    `Point de rencontre des secours (PRS) : ${site.address ?? ''}${site.lat != null && site.lng != null ? ` – GPS ${site.lat.toFixed(5)}, ${site.lng.toFixed(5)}` : ''}`,
   ].join('\n');
+}
+
+// Ce qu'il faut dire au téléphone (les 7 points de la notice MSA), pré-rempli avec le chantier.
+export function callScript(o: { company: string | null; address: string | null; lat: number | null; lng: number | null; meetingPoint?: string | null }): string[] {
+  const gps = o.lat != null && o.lng != null ? `GPS ${o.lat.toFixed(5)}, ${o.lng.toFixed(5)}` : null;
+  return [
+    `Je suis … (nom, prénom), de l'entreprise ${o.company ?? '…'}.`,
+    `Lieu : ${[o.address, gps].filter(Boolean).join(' – ') || '…'}. Accès : …`,
+    "L'accident : … (chute de l'arbre, coupure, branche reçue, électrisation…).",
+    'Blessés : … (combien ; conscient ? respire ? saigne ?).',
+    'Gestes en cours : … (compression, position latérale, descente de l\'arbre…).',
+    `Rendez-vous des secours : ${o.meetingPoint || o.address || '…'}.`,
+    'Je ne raccroche pas le premier : j\'attends les instructions.',
+  ];
 }

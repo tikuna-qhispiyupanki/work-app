@@ -31,19 +31,43 @@ export const EQUIPMENT = [
   'Kit de sauvetage', 'Grimpettes', 'Nacelle', 'Broyeur', 'Rogneuse de souche', 'Camion / remorque', 'Balisage et signalisation', 'Trousse de premiers secours',
 ];
 
+// Conduite à tenir en cas d'accident : « Protéger, Alerter, Secourir », d'après la notice MSA
+// « La fiche d'intervention lors des chantiers d'élagage et d'abattage » (réf. 12350, octobre 2023).
 export const DEFAULT_ACCIDENT_PROCEDURE = [
-  '1. Protéger : arrêter les machines, sécuriser la zone, ne pas se mettre en danger.',
-  '2. Alerter : appeler le 15 (SAMU), le 18 (pompiers) ou le 112. Donner l\'adresse exacte, le point de rendez-vous et l\'état de la victime.',
-  '3. Secourir : gestes de premiers secours ; victime dans l\'arbre : descente par le sauveteur désigné avec le kit de sauvetage.',
-  '4. Envoyer quelqu\'un accueillir les secours au point de rendez-vous.',
-  '5. Prévenir le chef d\'entreprise.',
+  '1. PROTÉGER',
+  '- Sécuriser les travaux en cours, puis arrêter les travaux (machines à l\'arrêt).',
+  '- Protéger les zones dangereuses (balisage, interdiction d\'accès).',
+  '- Prévenir le responsable du chantier ou le chef d\'entreprise.',
+  '2. ALERTER : SAMU 15 · Pompiers 18 · Police 17 · Europe 112 · 114 par SMS (sourd, malentendant, ne peut pas parler)',
+  '- Dire qui on est (nom, prénom, entreprise).',
+  '- Donner le lieu exact (adresse, GPS) et les moyens d\'accès.',
+  '- Décrire l\'accident (chute, coupure, électrisation, écrasement…).',
+  '- Dire le nombre de blessés et leur état (conscient ? respire ? saigne ?).',
+  '- Dire les gestes de premiers secours en cours.',
+  '- Fixer le rendez-vous au point de rencontre des secours.',
+  '- Ne jamais raccrocher le premier : attendre les instructions des secours.',
+  '3. SECOURIR',
+  '- Intervenir sans s\'exposer (sauveteur secouriste du travail, grimpeur sauveteur dans l\'arbre).',
+  '- Préparer l\'arrivée et l\'accès des secours (dégager rémanents et matériel, envoyer quelqu\'un au point de rencontre).',
+  '- Prévenir le siège des entreprises (donneur d\'ordre et entreprise qui réalise le chantier).',
+  '- Ne pas déplacer ni transporter la victime sans l\'accord des secours.',
 ].join('\n');
 
 export const DEFAULT_RESCUE = [
-  'Sauveteur désigné au sol, formé au sauvetage dans l\'arbre, présent pendant tout le travail en hauteur.',
-  'Kit de sauvetage prêt au pied de l\'arbre, trousse de premiers secours dans le véhicule.',
-  'Téléphone chargé et réseau vérifié sur place (sinon : point d\'appel repéré).',
-  'Accès des secours : voir point de rendez-vous ci-dessous.',
+  '- Trousse de secours adaptée à l\'activité : dans le véhicule (préciser où).',
+  '- Kit de sauvetage d\'élagueur prêt au pied de l\'arbre.',
+  '- Sauveteur secouriste du travail (SST) présent ; grimpeur sauveteur capable de descendre une victime de l\'arbre.',
+  '- Moyen de communication vérifié sur place (réseau mobile, sinon point d\'appel repéré).',
+  '- Véhicules garés dans le sens du départ, voie d\'accès laissée libre pour les secours.',
+].join('\n');
+
+// 7e élément de la notice MSA : intempéries et phénomènes météo imprévus.
+export const DEFAULT_WEATHER = [
+  '- Consulter la vigilance Météo-France avant le chantier (vent, fortes pluies, orages ; à La Réunion : alertes cycloniques).',
+  '- En cas de vent fort, orage ou forte pluie : sécuriser les travaux en cours, puis arrêter.',
+  '- Protéger les zones dangereuses (balisage, interdiction d\'accès).',
+  '- Descendre de l\'arbre et se mettre à l\'abri ; prévenir le responsable du chantier ou le chef d\'entreprise.',
+  '- Reprendre seulement quand les conditions sont de nouveau favorables (accord du chef de chantier).',
 ].join('\n');
 
 export type RisksValue = { checked: RiskKey[]; other: string };
@@ -90,6 +114,7 @@ export function prefillSheet(i: SheetPrefillInput) {
     prevention: preventionFor(checked),
     accident_procedure: DEFAULT_ACCIDENT_PROCEDURE,
     rescue: DEFAULT_RESCUE,
+    weather_procedure: DEFAULT_WEATHER,
     emergency_contacts: 'SAMU 15 · Pompiers 18 · Urgences 112\nHôpital le plus proche : \nPoint de rendez-vous des secours : ',
     start_date: i.start,
     end_date: i.end,
@@ -97,7 +122,7 @@ export function prefillSheet(i: SheetPrefillInput) {
 }
 
 // Ce qui manque pour pouvoir signer la fiche.
-export function missingSheetFields(s: { location?: string | null; works?: string | null; start_date?: string | null; end_date?: string | null; risks?: string | null; prevention?: string | null; accident_procedure?: string | null; rescue?: string | null }): string[] {
+export function missingSheetFields(s: { location?: string | null; works?: string | null; start_date?: string | null; end_date?: string | null; risks?: string | null; prevention?: string | null; accident_procedure?: string | null; rescue?: string | null; weather_procedure?: string | null }): string[] {
   const m: string[] = [];
   if (!s.location?.trim()) m.push('emplacement');
   if (!s.works?.trim()) m.push('travaux');
@@ -108,6 +133,7 @@ export function missingSheetFields(s: { location?: string | null; works?: string
   if (!s.prevention?.trim()) m.push('mesures de prévention');
   if (!s.accident_procedure?.trim()) m.push('conduite à tenir en cas d\'accident');
   if (!s.rescue?.trim()) m.push('organisation des secours');
+  if (s.weather_procedure !== undefined && !s.weather_procedure?.trim()) m.push('consignes en cas d\'intempéries');
   return m;
 }
 
@@ -119,8 +145,8 @@ export function retainUntil(signedAt: Date): string {
 }
 
 // Textes par défaut d'une entreprise (enregistrés depuis une fiche qu'elle a adaptée).
-export type SheetDefaults = { equipment?: string; risks?: string; prevention?: string; accident_procedure?: string; rescue?: string };
-export const DEFAULT_KEYS = ['equipment', 'risks', 'prevention', 'accident_procedure', 'rescue'] as const;
+export type SheetDefaults = { equipment?: string; risks?: string; prevention?: string; accident_procedure?: string; rescue?: string; weather_procedure?: string };
+export const DEFAULT_KEYS = ['equipment', 'risks', 'prevention', 'accident_procedure', 'rescue', 'weather_procedure'] as const;
 
 // Applique les textes de l'entreprise sur le pré-remplissage. Les risques propres au chantier
 // (lignes électriques signalées à la visite) restent cochés en plus des risques habituels.

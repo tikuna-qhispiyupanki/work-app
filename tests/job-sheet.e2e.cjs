@@ -146,7 +146,10 @@ function pdfText(buf) {
   if (powerChecked !== 'true') throw new Error('risque « lignes électriques » pas coché : ' + powerChecked + ' ' + (await vis(p.getByRole('checkbox', { name: 'Lignes électriques à proximité', exact: true })).evaluate((e) => e.outerHTML.slice(0, 300))));
   await vis(p.getByText(/Jean Chef \(Chef d'équipe\)/)).waitFor();
   await p.waitForFunction(() => [...document.querySelectorAll('textarea')].some((e) => /Urgences les plus proches : Centre hospitalier Ouest Réunion – CHOR/.test(e.value)), null, { timeout: 10000 });
-  console.log('3. fiche pré-remplie : adresse + GPS, travaux du devis, image du plan, risque « lignes électriques » coché, intervenants, urgences les plus proches (CHOR, sans réseau)');
+  await vis(p.getByRole('button', { name: 'Appeler le 15, SAMU', exact: true })).waitFor();
+  await vis(p.getByRole('button', { name: 'Envoyer un SMS au 114', exact: true })).waitFor();
+  await vis(p.getByText(/Lieu : 4 Rue des Barracudas.*GPS -21\.05330/)).waitFor();
+  console.log('3. fiche pré-remplie : adresse + GPS, travaux du devis, image du plan, risque « lignes électriques » coché, intervenants, urgences les plus proches (CHOR, sans réseau), boutons d\'appel 15/18/17/112/SMS 114 et texte à dire au téléphone');
   await field('Date de fin').fill(day);
   await vis(p.getByRole('checkbox', { name: 'Insectes (guêpes, frelons), animaux', exact: true })).click();
   await p.waitForFunction(() => document.querySelector('[aria-label="Insectes (guêpes, frelons), animaux"]')?.getAttribute('aria-checked') === 'true', null, { timeout: 10000 });
@@ -176,12 +179,12 @@ function pdfText(buf) {
   const file = path.join(__dirname, 'out-fiche-intervention.pdf');
   await download.saveAs(file);
   const txt = pdfText(fs.readFileSync(file));
-  const must = ["FICHE D'INTERVENTION", '1. Emplacement', '2. Croquis', 'Lignes électriques à proximité', 'Insectes', '5. Conduite', '6. Organisation des secours', 'par Gérant Test', 'Jean Chef', 'Lou Sauveteur', '(2 ans)', 'CHOR'];
+  const must = ["FICHE D'INTERVENTION", '1. Emplacement', '2. Croquis', 'Lignes électriques à proximité', 'Insectes', '5. Conduite', '6. Organisation des secours', '7. Intempéries', 'Au téléphone, dire', 'par Gérant Test', 'Jean Chef', 'Lou Sauveteur', '(2 ans)', 'CHOR'];
   const missing = must.filter((m) => !txt.includes(m));
   const images = (fs.readFileSync(file).toString('latin1').match(/\/Subtype \/Image/g) || []).length;
   if (missing.length || images < 3) throw new Error(`PDF incomplet : ${missing.join(', ')} ; images ${images}`);
   await p.screenshot({ path: 'tests/out-fiche.png' });
-  console.log(`6. PDF de la fiche (hors ligne) : 6 rubriques, croquis + signatures (${images} images distinctes), ${Math.round(fs.statSync(file).size / 1024)} Ko`);
+  console.log(`6. PDF de la fiche (hors ligne) : 7 rubriques, croquis + signatures (${images} images distinctes), ${Math.round(fs.statSync(file).size / 1024)} Ko`);
 
   // 7. Retour du réseau : tout part au serveur, sans doublon de chantier
   await ctx.setOffline(false);
@@ -191,6 +194,7 @@ function pdfText(buf) {
             (select id = q.id from jobs where company_id in ${CO} and quote_id = q.id limit 1) as meme_id,
             (select count(*) from job_members jm join jobs j on j.id = jm.job_id where j.quote_id = q.id and jm.deleted_at is null) as equipe,
             (select s.status from intervention_sheets s join jobs j on j.id = s.job_id where j.quote_id = q.id limit 1) as fiche,
+            (select s.weather_procedure like '%Météo-France%' from intervention_sheets s join jobs j on j.id = s.job_id where j.quote_id = q.id limit 1) as meteo,
             (select s.retain_until - current_date > 700 from intervention_sheets s join jobs j on j.id = s.job_id where j.quote_id = q.id limit 1) as garde_2_ans,
             (select count(*) from intervention_sheet_acks a join intervention_sheets s on s.id = a.sheet_id join jobs j on j.id = s.job_id where j.quote_id = q.id) as attestations
      from quotes q where q.company_id in ${CO} and q.number = '${number}'`,
@@ -200,7 +204,7 @@ function pdfText(buf) {
   console.log('7. retour du réseau → serveur :', JSON.stringify(srv[0]));
   const def = sql(`select sheet_defaults like '%Inspection avant la mont%' as ok from companies where id in ${CO}`);
   console.log('   textes par défaut sur le serveur :', JSON.stringify(def[0]));
-  if (srv[0].chantiers !== 1 || !srv[0].meme_id || srv[0].fiche !== 'signee' || srv[0].equipe !== 2) throw new Error('données serveur incorrectes');
+  if (srv[0].chantiers !== 1 || !srv[0].meteo || !srv[0].meme_id || srv[0].fiche !== 'signee' || srv[0].equipe !== 2) throw new Error('données serveur incorrectes');
 
   await p.reload({ waitUntil: 'load' });
   await vis(p.getByText(/Version 1 signée le .* par Gérant Test/)).waitFor({ timeout: 30000 });

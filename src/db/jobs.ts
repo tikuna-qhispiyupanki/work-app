@@ -92,7 +92,7 @@ export async function removeJobMember(id: string) {
 export type SheetRow = {
   id: string; company_id: string; job_id: string; version: number; status: 'brouillon' | 'signee' | 'remplacee'; location: string | null; works: string | null;
   equipment: string | null; start_date: string | null; end_date: string | null; sketch_photo_id: string | null; risks: string | null; prevention: string | null;
-  accident_procedure: string | null; rescue: string | null; emergency_contacts: string | null; signer_name: string | null; signed_at: string | null;
+  accident_procedure: string | null; rescue: string | null; weather_procedure: string | null; emergency_contacts: string | null; signer_name: string | null; signed_at: string | null;
   signature_photo_id: string | null; retain_until: string | null; created_at: string;
 };
 export const JOB_SHEETS_SQL = `SELECT * FROM intervention_sheets WHERE job_id = ? AND deleted_at IS NULL ORDER BY version DESC`;
@@ -100,7 +100,7 @@ export const SHEET_SQL = `SELECT * FROM intervention_sheets WHERE id = ?`;
 export const SHEET_ACKS_SQL = `SELECT id, member_id, name, acknowledged_at, signature_photo_id FROM intervention_sheet_acks WHERE sheet_id = ? AND deleted_at IS NULL ORDER BY acknowledged_at`;
 export type AckRow = { id: string; member_id: string | null; name: string; acknowledged_at: string; signature_photo_id: string | null };
 
-const SHEET_FIELDS = ['location', 'works', 'equipment', 'start_date', 'end_date', 'sketch_photo_id', 'risks', 'prevention', 'accident_procedure', 'rescue', 'emergency_contacts'] as const;
+const SHEET_FIELDS = ['location', 'works', 'equipment', 'start_date', 'end_date', 'sketch_photo_id', 'risks', 'prevention', 'accident_procedure', 'rescue', 'weather_procedure', 'emergency_contacts'] as const;
 export type SheetField = (typeof SHEET_FIELDS)[number];
 
 // Dernier croquis de la visite (sinon l'image du plan) : proposé comme croquis de la fiche.

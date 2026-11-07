@@ -46,7 +46,7 @@ test('PDF de la fiche : 6 rubriques, signatures, conservation, responsabilité',
     acks: [{ name: 'Paul', acknowledged_at: '2026-11-20T04:00:00Z' }],
   });
   const s = pdfStrings(pdf);
-  for (const m of ["FICHE D'INTERVENTION", '1. Emplacement', '2. Croquis', '3. Risques', '4. Mesures de prévention', "5. Conduite à tenir en cas d'accident", '6. Organisation des secours', 'par Gérant Test', "jusqu'au 19/11/2028", 'Paul', 'la responsabilité restent celles de l']) {
+  for (const m of ["FICHE D'INTERVENTION", '1. Emplacement', '2. Croquis', '3. Risques', '4. Mesures de prévention', "5. Conduite à tenir en cas d'accident", '6. Organisation des secours', '7. Intempéries', 'Au téléphone, dire', '114', 'Ne jamais raccrocher le premier', 'par Gérant Test', "jusqu'au 19/11/2028", 'Paul', 'la responsabilité restent celles de l']) {
     assert.ok(s.includes(m), `manque : ${m}`);
   }
 });
@@ -60,6 +60,8 @@ test('urgences les plus proches (La Réunion, sans réseau)', () => {
   assert.equal(nearestHospital({ lat: 48.85, lng: 2.35 }), null); // hexagone : à compléter
   const b = emergencyBlock({ address: '4 Rue des Barracudas, 97434 Saint-Paul', lat: -21.0533, lng: 55.2306 });
   assert.match(b, /SAMU 15/);
+  assert.match(b, /114 par SMS/);
+  assert.match(b, /Point de rencontre des secours \(PRS\)/);
   assert.match(b, /CHOR.*≈ 11 km/);
   assert.match(b, /GPS -21\.05330, 55\.23060/);
 });

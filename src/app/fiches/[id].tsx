@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '@/auth/session';
 import { confirmAction } from '@/components/confirm';
 import { DateField } from '@/components/date-field';
+import { EmergencyCard } from '@/components/emergency-card';
 import { Icon } from '@/components/icon';
 import { LocalImage } from '@/components/local-image';
 import { SignaturePad, SignaturePadHandle } from '@/components/signature-pad';
@@ -41,6 +42,7 @@ export default function SheetScreen() {
   const { company } = useAuth();
   const { data: jobs } = useQuery<{ site_address: string | null; site_lat: number | null; site_lng: number | null }>('SELECT site_address, site_lat, site_lng FROM jobs WHERE id = ?', [s?.job_id ?? '']);
   const job = jobs[0];
+  const companyName = company?.name ?? null;
   if (isLoading) return <Muted>Chargement…</Muted>;
   if (!s) return <Muted>Fiche introuvable.</Muted>;
   const draft = s.status === 'brouillon';
@@ -74,6 +76,8 @@ export default function SheetScreen() {
               : `Version ${s.version}, remplacée par une version plus récente (gardée jusqu'au ${toDate(s.retain_until).toLocaleDateString('fr-FR')}).`}
         </Text>
       </View>
+
+      <EmergencyCard company={companyName} address={job?.site_address ?? null} lat={job?.site_lat ?? null} lng={job?.site_lng ?? null} />
 
       <Card title="1. Emplacement, travaux, équipements, dates">
         <TextBlock key={`Emplacement:${s.location ?? ""}`} label="Emplacement" value={s.location} editable={draft} onSave={set('location')} />
@@ -167,6 +171,9 @@ export default function SheetScreen() {
           />
         ) : null}
         <Muted>Urgences proposées d&apos;après le GPS du chantier (liste des hôpitaux publics de La Réunion) : vérifie l&apos;itinéraire avant le chantier.</Muted>
+      </Card>
+      <Card title="7. Intempéries et phénomènes météo imprévus">
+        <TextBlock key={`Consignes météo:${s.weather_procedure ?? ""}`} label="Consignes en cas d'intempéries" value={s.weather_procedure} editable={draft} onSave={set('weather_procedure')} />
       </Card>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
