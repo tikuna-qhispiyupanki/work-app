@@ -38,15 +38,18 @@ export function SyncStatus() {
   }, []);
 
   const sending = status.dataFlowStatus.uploading || status.dataFlowStatus.downloading;
+  const serverError = status.dataFlowStatus.downloadError ?? status.dataFlowStatus.uploadError;
+  const refused = !!serverError && /401|403|Unauthorized|Forbidden/i.test(String(serverError));
   let text: string;
   if (pending === null) text = 'Préparation de la base locale…';
   else if (!POWERSYNC_URL) text = pending ? `${pending} modification${pending > 1 ? 's' : ''} en attente d'envoi (synchronisation pas encore branchée).` : 'Tout est enregistré sur le téléphone.';
   else if (!online) text = pending ? `${pending} modification${pending > 1 ? 's' : ''} à envoyer au retour du réseau.` : 'Tout est enregistré. Envoi automatique au retour du réseau.';
+  else if (refused) text = `Le serveur de synchronisation refuse la connexion (réglage à corriger). Tes données restent sur le téléphone${pending ? ` : ${pending} en attente` : ''}.`;
   else if (pending) text = sending || status.connected ? `Envoi en cours… ${pending} restante${pending > 1 ? 's' : ''}.` : `${pending} modification${pending > 1 ? 's' : ''} en attente d'envoi (connexion au serveur…).`;
   else if (status.connected) text = '✓ Tout est envoyé au serveur.';
   else text = 'Connexion au serveur…';
 
-  const warn = failures > 0 || (!!pending && !online);
+  const warn = failures > 0 || refused || (!!pending && !online);
   return (
     <View style={[styles.bar, warn || (pending ?? 0) > 0 ? styles.pending : null, { paddingBottom: Spacing.sm + insets.bottom }]}>
       <Text style={styles.text}>

@@ -37,7 +37,8 @@ SQL
 echo "Compte de test créé."
 
 status=0
-TESTS="${*:-auth offline-visit visit-geo-manage clients-trees}"
+if [ "${1:-}" = "--debug" ]; then shift; node "$@"; exit $?; fi
+TESTS="${*:-auth offline-visit visit-geo-manage clients-trees sync}"
 for t in $TESTS; do
   echo "== $t"
   node "tests/$t.e2e.cjs" 2>&1 | grep -v "agent-proxy\|cdp.expo\|For details" || status=1

@@ -30,8 +30,8 @@ Documents de référence :
    - 2b bis. Visites : « Me localiser » (GPS + adresse IGN), « Situer l'adresse », carte IGN plan/aérien et image du plan, date planifiée, modifier, supprimer, statut « faite » ✅ (validé)
    - 2b ter. Carnet clients (suggestions pendant la saisie, reprise de l'adresse de la dernière visite, fiche et historique), arbres numérotés et nommés sur la carte (et sur l'image du plan), bouton « Ajouter au calendrier » (.ics) ✅ (validé)
    - 2c-1. Serveur : tables, règles d'accès RLS, 12 tests, audit de sécurité Supabase ✅ (validé)
-   - 2c-2. Connexion (e-mail + mot de passe, confirmation par e-mail), création de l'entreprise, « Mon compte » ✅ (à valider)
-   - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur)
+   - 2c-2. Connexion (e-mail + mot de passe, confirmation par e-mail), création de l'entreprise, « Mon compte » ✅ (validé sur iPhone)
+   - 2c-3. Synchronisation PowerSync (téléphone ↔ serveur) ← **en cours** : envoi vers Supabase OK ; réception bloquée tant que « Use Supabase Auth » n'est pas activé dans PowerSync (Client Auth). Instance : `https://6aeeb4c7e277c04a3d8e7338.powersync.journeyapps.com` (réplication Supabase en place, rôle créé par l'assistant PowerSync). `POWERSYNC_URL` reste vide dans le code publié jusqu'au succès de `bash scripts/e2e.sh sync`.
    - 2d. Photos : compression, miniature, file d'envoi
 3. Grille de prix : import du fichier Excel
 4. Visite et devis
@@ -140,7 +140,8 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Avant de dire qu'une tâche est finie : `npm run typecheck` et `npm run build:web` doivent passer, puis `npm run test:unit` et `npm run test:e2e` (après `npx serve -s dist -l 8081`).
 - Ajout de librairie : `npx expo install` a besoin de api.expo.dev (bloqué dans l'environnement cloud) ; pour une librairie 100 % JavaScript sans lien avec la version d'Expo, `npm install` convient.
 - Composants qui utilisent le navigateur (DOM, canvas, IndexedDB) : fichier `.web.tsx`, plus un fichier `.tsx` de même interface pour le natif.
-- Environnement cloud de travail : « work-app » (accès réseau à data.geopf.fr, au site GitHub Pages, à docs.expo.dev, à la MSA et à Légifrance).
+- Environnement cloud de travail : « work-app » (accès réseau à data.geopf.fr, au site GitHub Pages, à docs.expo.dev, à la MSA, à Légifrance, au projet Supabase, à docs.powersync.com et à l'instance PowerSync).
+- Règles de synchronisation : `powersync/sync-config.yaml`, vérifiées par `npm run check:sync`, collées dans le tableau de bord PowerSync (Sync Streams → Deploy).
 - `npm run build:web` produit `dist/` : export Expo en mode « single page » + manifeste, icônes et service worker (`scripts/build-web.mjs`, `scripts/sw-template.js`).
 - Code et noms de tables en anglais. Textes de l'interface en français.
 - Les migrations SQL sont versionnées dans `supabase/migrations/`, une par changement. Chaque table métier a sa politique RLS dans la même migration.
