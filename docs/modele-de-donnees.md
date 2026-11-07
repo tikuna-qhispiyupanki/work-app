@@ -114,6 +114,12 @@ Le carnet clients et l'historique sont calculés à partir des visites (et plus 
 
 **quote_number_counters** (serveur) : `company_id`, `year`, `last_number`.
 
+**quote_sign_requests** (signature à distance, migrations 9 à 11) :
+- `quote_id`, `token` (jeton secret du lien, 256 bits aléatoires, créé sur le téléphone, unique), `expires_at` (15 jours au plus, jamais après la validité du devis ; 60 jours au maximum côté serveur) ;
+- `status` : `envoye` → `ouvert` → `signe` | `refuse` ; ou `annule` (par l'entreprise, tant que le lien n'a pas servi) ;
+- réponse du client, **écrite seulement par le serveur** : `opened_at`, `decided_at`, `signer_name`, `signer_ip`, `signer_user_agent`, `document_hash` (SHA-256 du devis affiché), `consent_text`, `signature_data` (image JPEG en « data URL »), `refusal_reason`.
+- Accès : l'entreprise (gérant, bureau, chef d'équipe) crée et annule ; un déclencheur refuse toute autre modification. Le client (non connecté) n'a accès qu'à deux fonctions : `quote_for_signature(jeton)` (lecture du devis, marque « ouvert ») et `decide_quote_signature(...)` (signe ou refuse, une seule fois, empreinte vérifiée). La décision met aussi le devis à `signe` / `refuse`.
+
 > **Numérotation hors-ligne.** Le numéro doit se suivre sans trou. Comme on peut finaliser un devis sans réseau, chaque téléphone **réserve à l'avance un petit bloc de numéros** (par exemple 10) quand il a du réseau. Avec un seul utilisateur, les numéros se suivent parfaitement. À plusieurs téléphones, l'ordre peut légèrement différer de l'ordre chronologique, mais sans trou ni doublon. Point à faire valider par le comptable.
 
 ### Chantier et fiche d'intervention

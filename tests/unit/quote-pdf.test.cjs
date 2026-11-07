@@ -48,3 +48,16 @@ test('PDF signé : nom et date du signataire', () => {
 test('texte nettoyé pour le PDF', () => {
   assert.strictEqual(pdfText('≈ 2 455,15 € → ✓ 🎁 ok'), '~ 2 455,15 € ->   ok');
 });
+
+test('PDF signé à distance : preuve imprimée (empreinte, IP)', () => {
+  const hash = 'a'.repeat(32) + 'b'.repeat(32);
+  const s = pdfStrings(
+    buildQuotePdf({ ...base, quote: { ...base.quote, status: 'signe', signed_at: '2026-11-08T10:00:00Z', signer_name: 'Mme Devis' }, remoteProof: { hash, ip: '203.0.113.7' } })
+  );
+  assert.match(s, /Signature électronique à distance|Signature \\351lectronique/);
+  assert.match(s, new RegExp('a'.repeat(32)));
+  assert.match(s, new RegExp('b'.repeat(32)));
+  assert.match(s, /203\.0\.113\.7/);
+  const { dataUrlBytes } = require('../../src/pdf/quote-pdf.ts');
+  assert.deepEqual([...dataUrlBytes('data:image/jpeg;base64,/9j/')], [0xff, 0xd8, 0xff]);
+});

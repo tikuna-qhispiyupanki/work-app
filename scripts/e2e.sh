@@ -20,6 +20,7 @@ do \$\$ declare cids uuid[]; begin
   -- Les devis finalisés sont protégés par des déclencheurs : on les suspend pour CE nettoyage seulement.
   set local session_replication_role = replica;
   -- Ordre : d'abord ce qui pointe vers autre chose (devis → photos → arbres → visites → clients → grille → entreprise).
+  delete from public.quote_sign_requests where company_id = any(cids);
   delete from public.quote_lines where company_id = any(cids);
   delete from public.quotes where company_id = any(cids);
   delete from public.quote_counters where company_id = any(cids);
@@ -61,7 +62,7 @@ case "$created" in *'"n":1'*) echo "Compte de test créé." ;; *) echo "⚠ Cré
 
 status=0
 if [ "${1:-}" = "--debug" ]; then shift; node "$@"; exit $?; fi
-TESTS="${*:-auth offline-visit visit-geo-manage clients-trees clients-manage client-import sync photos grid tree-sheet quote quote-sign sketch}"
+TESTS="${*:-auth offline-visit visit-geo-manage clients-trees clients-manage client-import sync photos grid tree-sheet quote quote-sign quote-remote sketch}"
 for t in $TESTS; do
   echo "== $t"
   node "tests/$t.e2e.cjs" 2>&1 | grep -v "agent-proxy\|cdp.expo\|For details" || status=1

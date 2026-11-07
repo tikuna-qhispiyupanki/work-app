@@ -30,3 +30,4 @@ streams:
       - SELECT * FROM price_items WHERE company_id IN mes_entreprises
       - SELECT * FROM quotes WHERE company_id IN mes_entreprises
       - SELECT * FROM quote_lines WHERE company_id IN mes_entreprises
+      - SELECT * FROM quote_sign_requests WHERE company_id IN mes_entreprises

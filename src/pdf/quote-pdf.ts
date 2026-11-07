@@ -21,6 +21,7 @@ export type QuotePdfInput = {
   client: PdfClient;
   signatureJpeg?: Uint8Array | null; // image de la signature du client, si signé
   logo?: { jpeg: Uint8Array; width: number; height: number } | null; // logo de l'entreprise
+  remoteProof?: { hash: string; ip?: string | null } | null; // signé à distance par le lien personnel
 };
 
 const FRANCHISE = 'TVA non applicable, art. 293 B du CGI';
@@ -224,6 +225,13 @@ export function buildQuotePdf(input: QuotePdfInput): ArrayBuffer {
     text('précédés de la mention « Bon pour accord »', 109, y + 15, { size: 8.5, color: GREY });
   }
   text("En signant, le client accepte le présent devis et ses conditions.", L, y + 6, { size: 8.5, color: GREY });
+  if (q.status === 'signe' && input.remoteProof) {
+    text('Signature électronique à distance (lien personnel à usage unique).', L, y + 12, { size: 7.5, color: GREY });
+    text('Empreinte SHA-256 du devis signé :', L, y + 16, { size: 7.5, color: GREY });
+    text(input.remoteProof.hash.slice(0, 32), L, y + 20, { size: 7.5, color: GREY });
+    text(input.remoteProof.hash.slice(32), L, y + 24, { size: 7.5, color: GREY });
+    if (input.remoteProof.ip) text(`Adresse IP du signataire : ${input.remoteProof.ip}`, L, y + 28, { size: 7.5, color: GREY });
+  }
 
   // Pied de page
   const pages = doc.getNumberOfPages();
@@ -232,4 +240,12 @@ export function buildQuotePdf(input: QuotePdfInput): ArrayBuffer {
     text(`Devis ${q.number ?? 'brouillon'} - ${c.name ?? ''} - page ${i}/${pages}`, 105, 290, { size: 8, color: GREY, align: 'center' });
   }
   return doc.output('arraybuffer');
+}
+
+// « data:image/jpeg;base64,… » → octets de l'image.
+export function dataUrlBytes(url: string): Uint8Array {
+  const bin = atob(url.slice(url.indexOf(',') + 1));
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
 }

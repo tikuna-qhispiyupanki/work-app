@@ -170,6 +170,28 @@ const price_items = new Table(
 );
 
 // Devis et leurs lignes (montants en centimes).
+// Demandes de signature à distance (lien personnel envoyé au client). La réponse du client
+// (nom, date, IP, empreinte, image de signature) n'est écrite que par le serveur.
+const quote_sign_requests = new Table(
+  {
+    ...common,
+    quote_id: column.text,
+    token: column.text,
+    expires_at: column.text,
+    status: column.text, // 'envoye' | 'ouvert' | 'signe' | 'refuse' | 'annule'
+    opened_at: column.text,
+    decided_at: column.text,
+    signer_name: column.text,
+    signer_ip: column.text,
+    signer_user_agent: column.text,
+    document_hash: column.text,
+    consent_text: column.text,
+    signature_data: column.text,
+    refusal_reason: column.text,
+  },
+  { indexes: { by_quote: ['quote_id'] } }
+);
+
 const quotes = new Table(
   {
     ...common,
@@ -238,7 +260,7 @@ const upload_queue = new Table(
 );
 
 export const AppSchema = new Schema({
-  clients, visits, trees, photos, companies, memberships, profiles, price_grids, price_items, quotes, quote_lines,
+  clients, visits, trees, photos, companies, memberships, profiles, price_grids, price_items, quotes, quote_lines, quote_sign_requests,
   quote_number_pool, upload_queue,
 });
 
