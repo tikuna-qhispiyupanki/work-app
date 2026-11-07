@@ -91,7 +91,7 @@ Le carnet clients et l'historique sont calculés à partir des visites (et plus 
 - `estimated_ground_hours`, `estimated_climber_hours`, `waste_m3` ;
 - `notes` (repère pour l'équipe : « au fond à droite du portail »).
 
-**sketches**, le croquis : `visit_id`, `kind` (`page_blanche` | `sur_photo`), `base_photo_id`, `drawing` (les traits, enregistrés comme texte), `rendered_photo_id` (image finale, utilisée dans la fiche d'intervention et le rapport).
+**sketches** (non créée : le croquis est une ligne de `photos` avec `kind = 'croquis'`, rattachée à la visite ; retoucher crée une nouvelle image et masque l'ancienne). Prévu à l'origine : `visit_id`, `kind` (`page_blanche` | `sur_photo`), `base_photo_id`, `drawing` (les traits, enregistrés comme texte), `rendered_photo_id` (image finale, utilisée dans la fiche d'intervention et le rapport).
 
 ### Devis
 

@@ -61,7 +61,7 @@ case "$created" in *'"n":1'*) echo "Compte de test créé." ;; *) echo "⚠ Cré
 
 status=0
 if [ "${1:-}" = "--debug" ]; then shift; node "$@"; exit $?; fi
-TESTS="${*:-auth offline-visit visit-geo-manage clients-trees clients-manage sync photos grid tree-sheet quote quote-sign}"
+TESTS="${*:-auth offline-visit visit-geo-manage clients-trees clients-manage sync photos grid tree-sheet quote quote-sign sketch}"
 for t in $TESTS; do
   echo "== $t"
   node "tests/$t.e2e.cjs" 2>&1 | grep -v "agent-proxy\|cdp.expo\|For details" || status=1

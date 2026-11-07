@@ -33,7 +33,13 @@ export default function PhotoScreen() {
           {p.width} × {p.height} px · {p.storage_path ? '✓ envoyée au serveur' : '⏳ en attente d’envoi'}
         </Muted>
       </Card>
-      <SecondaryButton label="Retirer la photo" danger onPress={remove} />
+      {p.kind === 'croquis' ? (
+        <SecondaryButton
+          label="✏️ Retoucher le croquis"
+          onPress={() => router.push({ pathname: '/croquis', params: { visit: p.owner_id, fond: p.id, remplace: p.id } })}
+        />
+      ) : null}
+      <SecondaryButton label={p.kind === 'croquis' ? 'Retirer le croquis' : 'Retirer la photo'} danger onPress={remove} />
     </ScrollView>
   );
 }

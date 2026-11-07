@@ -7,6 +7,7 @@ import { db, newId, nowIso } from './database';
 export type PhotoKind = 'photo' | 'plan' | 'croquis' | 'signature' | 'logo';
 export type PhotoRow = {
   id: string;
+  owner_id?: string;
   company_id: string;
   kind: PhotoKind;
   width: number;
@@ -80,4 +81,4 @@ export const OWNER_PHOTOS_SQL = `
   WHERE owner_type = ? AND owner_id = ? AND kind = 'photo' AND deleted_at IS NULL
   ORDER BY taken_at`;
 
-export const PHOTO_SQL = `SELECT id, company_id, kind, width, height, storage_path, taken_at, lat, lng, caption FROM photos WHERE id = ?`;
+export const PHOTO_SQL = `SELECT id, company_id, owner_id, kind, width, height, storage_path, taken_at, lat, lng, caption FROM photos WHERE id = ?`;
