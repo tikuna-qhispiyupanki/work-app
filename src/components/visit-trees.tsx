@@ -114,7 +114,7 @@ export function VisitTrees({ visitId, site }: { visitId: string; site: GeoPoint 
   return (
     <Card title={`Arbres${trees.length ? ` (${trees.length})` : ''}`}>
       {center ? (
-        <GeoMap ref={mapRef} center={center} markers={markers} onTap={mode.kind === 'idle' ? undefined : onTap} hint={hint} />
+        <GeoMap ref={mapRef} center={center} markers={markers} onTap={mode.kind === 'idle' ? undefined : onTap} hint={hint} height={400} />
       ) : (
         <Muted>Localise d&apos;abord le chantier (bouton « Modifier », puis « Me localiser » ou « Situer l&apos;adresse ») pour placer les arbres sur la carte.</Muted>
       )}

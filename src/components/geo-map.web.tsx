@@ -16,15 +16,19 @@ type Props = {
   onTap?: (p: GeoPoint) => void; // toucher (sans glisser) sur la carte
   onViewChange?: () => void; // fond, zoom ou déplacement de la vue
   hint?: string;
+  height?: number;
   ref?: Ref<GeoMapHandle>;
 };
 
-const HEIGHT = 280;
+const DEFAULT_HEIGHT = 280;
+// Au-delà du zoom 19 (limite des cartes IGN, ~30 cm par pixel), agrandissement « à la loupe » ×2 puis ×4.
+const MAX_VIEW_ZOOM = 21;
 const CAPTURE_W = 1200; // taille de l'image enregistrée (pixels)
 const CAPTURE_H = 800;
 const TAP_TOLERANCE = 8; // au-delà, c'est un glissement (déplacement de la carte)
 
-export function GeoMap({ center, markers, onTap, onViewChange, hint, ref }: Props) {
+export function GeoMap({ center, markers, onTap, onViewChange, hint, height = DEFAULT_HEIGHT, ref }: Props) {
+  const HEIGHT = height;
   const box = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; cx: number; cy: number; moved: boolean } | null>(null);
   const [width, setWidth] = useState(0);
@@ -57,19 +61,22 @@ export function GeoMap({ center, markers, onTap, onViewChange, hint, ref }: Prop
     capture: () => (online && failed === 0 ? renderPlan(view, layer, zoom, markers) : Promise.resolve(null)),
   }));
 
-  const grid = width ? tilesForView(view, zoom, width, HEIGHT) : null;
+  // Tuiles au zoom réel disponible (≤ 19), agrandies d'un facteur « scale » si on zoome plus.
+  const tileZoom = Math.min(zoom, MAX_ZOOM[layer]);
+  const scale = 2 ** (zoom - tileZoom);
+  const grid = width ? tilesForView(view, tileZoom, width / scale, HEIGHT / scale) : null;
   const toScreen = (p: GeoPoint) => {
-    const w = toWorldPx(p, zoom);
-    return grid ? { x: w.x - grid.originX, y: w.y - grid.originY } : { x: -100, y: -100 };
+    const w = toWorldPx(p, tileZoom);
+    return grid ? { x: (w.x - grid.originX) * scale, y: (w.y - grid.originY) * scale } : { x: -100, y: -100 };
   };
 
   const changeLayer = (l: MapLayer) => {
     setLayer(l);
-    setZoom((z) => Math.min(z, MAX_ZOOM[l]));
+    setZoom((z) => Math.min(z, MAX_VIEW_ZOOM));
     onViewChange?.();
   };
   const changeZoom = (delta: number) => {
-    setZoom((z) => Math.max(13, Math.min(MAX_ZOOM[layer], z + delta)));
+    setZoom((z) => Math.max(13, Math.min(MAX_VIEW_ZOOM, z + delta)));
     onViewChange?.();
   };
 
@@ -97,7 +104,7 @@ export function GeoMap({ center, markers, onTap, onViewChange, hint, ref }: Prop
       return;
     }
     const r = box.current.getBoundingClientRect();
-    onTap?.(fromWorldPx(grid.originX + e.clientX - r.left, grid.originY + e.clientY - r.top, zoom));
+    onTap?.(fromWorldPx(grid.originX * scale + e.clientX - r.left, grid.originY * scale + e.clientY - r.top, zoom));
   };
 
   return (
@@ -124,12 +131,12 @@ export function GeoMap({ center, markers, onTap, onViewChange, hint, ref }: Prop
         {online && grid
           ? grid.tiles.map((t) => (
               <img
-                key={`${layer}-${zoom}-${t.x}-${t.y}`}
-                src={tileUrl(layer, zoom, t.x, t.y)}
+                key={`${layer}-${tileZoom}-${t.x}-${t.y}`}
+                src={tileUrl(layer, tileZoom, t.x, t.y)}
                 alt=""
                 draggable={false}
                 onError={() => setFailed((n) => n + 1)}
-                style={{ position: 'absolute', left: t.left, top: t.top, width: TILE, height: TILE, pointerEvents: 'none' }}
+                style={{ position: 'absolute', left: t.left * scale, top: t.top * scale, width: TILE * scale, height: TILE * scale, pointerEvents: 'none' }}
               />
             ))
           : null}
@@ -150,6 +157,7 @@ export function GeoMap({ center, markers, onTap, onViewChange, hint, ref }: Prop
         <Toggle label="Vue aérienne" active={layer === 'aerien'} onPress={() => changeLayer('aerien')} />
         <Toggle label="Plan" active={layer === 'plan'} onPress={() => changeLayer('plan')} />
         <View style={{ flex: 1 }} />
+        {zoom > MAX_ZOOM[layer] ? <Text style={styles.hint}>loupe ×{scale}</Text> : null}
         <Toggle label="−" active={false} onPress={() => changeZoom(-1)} />
         <Toggle label="+" active={false} onPress={() => changeZoom(1)} />
       </View>

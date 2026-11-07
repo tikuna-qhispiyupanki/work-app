@@ -1,9 +1,13 @@
-import { db, nowIso } from './database';
+import { currentIds } from '@/auth/current';
+
+import { db, newId, nowIso } from './database';
 
 // Carnet clients : recherche, fiche et historique des visites.
 
+export type ClientKind = 'particulier' | 'professionnel';
 export type ClientRow = {
   id: string;
+  kind: ClientKind | null;
   name: string | null;
   phone: string | null;
   email: string | null;
@@ -16,7 +20,7 @@ export type ClientRow = {
 };
 
 const CLIENT_COLUMNS = `
-  c.id, c.name, c.phone, c.email, c.address, c.postal_code, c.city, c.notes,
+  c.id, c.kind, c.name, c.phone, c.email, c.address, c.postal_code, c.city, c.notes,
   (SELECT COUNT(*) FROM visits v WHERE v.client_id = c.id AND v.deleted_at IS NULL) AS visit_count,
   (SELECT MAX(v.visited_at) FROM visits v WHERE v.client_id = c.id AND v.deleted_at IS NULL) AS last_visit_at`;
 
@@ -56,11 +60,39 @@ export async function lastVisitOf(clientId: string) {
   );
 }
 
-export type ClientInput = { name: string; phone: string; email: string; address: string; postalCode: string; city: string; notes: string };
+export type ClientInput = {
+  kind: ClientKind;
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  postalCode: string;
+  city: string;
+  notes: string;
+};
 
 export async function updateClient(id: string, c: ClientInput) {
   await db.execute(
-    `UPDATE clients SET name = ?, phone = ?, email = ?, address = ?, postal_code = ?, city = ?, notes = ?, updated_at = ? WHERE id = ?`,
-    [c.name.trim(), c.phone.trim(), c.email.trim(), c.address.trim(), c.postalCode.trim(), c.city.trim(), c.notes.trim(), nowIso(), id]
+    `UPDATE clients SET kind = ?, name = ?, phone = ?, email = ?, address = ?, postal_code = ?, city = ?, notes = ?, updated_at = ? WHERE id = ?`,
+    [c.kind, c.name.trim(), c.phone.trim(), c.email.trim(), c.address.trim(), c.postalCode.trim(), c.city.trim(), c.notes.trim(), nowIso(), id]
   );
+}
+
+// Nouveau client saisi directement dans le carnet (sans visite).
+export async function createClient(c: ClientInput): Promise<string> {
+  const { companyId, userId } = currentIds();
+  const id = newId();
+  const now = nowIso();
+  await db.execute(
+    `INSERT INTO clients (id, company_id, created_at, updated_at, created_by, kind, name, phone, email, address, postal_code, city, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, companyId, now, now, userId, c.kind, c.name.trim(), c.phone.trim(), c.email.trim(), c.address.trim(), c.postalCode.trim(), c.city.trim(), c.notes.trim()]
+  );
+  return id;
+}
+
+// Retire le client du carnet (suppression douce). Ses visites restent consultables.
+export async function archiveClient(id: string) {
+  const now = nowIso();
+  await db.execute('UPDATE clients SET deleted_at = ?, updated_at = ? WHERE id = ?', [now, now, id]);
 }

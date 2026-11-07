@@ -1,10 +1,12 @@
 import { useQuery } from '@powersync/react';
 import { Link, router, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { confirmAction } from '@/components/confirm';
 
 import { Button, Card, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
-import { CLIENT_DETAIL_SQL, CLIENT_VISITS_SQL, ClientRow } from '@/db/clients';
+import { archiveClient, CLIENT_DETAIL_SQL, CLIENT_VISITS_SQL, ClientRow } from '@/db/clients';
 import { toDate } from '@/domain/dates';
 
 type HistoryRow = { id: string; visited_at: string; status: string; site_address: string | null; site_city: string | null; notes: string | null; tree_count: number };
@@ -26,6 +28,15 @@ export default function ClientScreen() {
         {c.email ? <Muted>✉️ {c.email}</Muted> : null}
         {c.address || c.city ? <Muted>🏠 {[c.address, [c.postal_code, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')}</Muted> : null}
         {c.notes ? <Text style={styles.text}>{c.notes}</Text> : null}
+        {c.kind === 'professionnel' ? <Muted>Client professionnel</Muted> : null}
+        <View style={styles.actions}>
+          {c.phone ? <QuickAction label="📞 Appeler" url={`tel:${c.phone.replace(/\s/g, '')}`} /> : null}
+          {c.phone ? <QuickAction label="💬 SMS" url={`sms:${c.phone.replace(/\s/g, '')}`} /> : null}
+          {c.email ? <QuickAction label="✉️ E-mail" url={`mailto:${c.email}`} /> : null}
+          {c.address || c.city ? (
+            <QuickAction label="🧭 Itinéraire" url={`https://maps.apple.com/?daddr=${encodeURIComponent([c.address, c.postal_code, c.city].filter(Boolean).join(' '))}`} />
+          ) : null}
+        </View>
         <SecondaryButton label="Modifier la fiche" onPress={() => router.push({ pathname: '/clients/[id]/modifier', params: { id: c.id } })} />
       </Card>
 
@@ -57,11 +68,35 @@ export default function ClientScreen() {
       </Card>
 
       <Button label="+ Nouvelle visite pour ce client" onPress={() => router.push({ pathname: '/visites/nouvelle', params: { client: c.id } })} />
+      <SecondaryButton
+        label="Retirer du carnet"
+        danger
+        onPress={async () => {
+          const msg = history.length
+            ? `Le client n'apparaîtra plus dans le carnet ni dans les suggestions. Ses ${history.length} visite${history.length > 1 ? 's restent consultables' : ' reste consultable'}.`
+            : "Le client n'apparaîtra plus dans le carnet ni dans les suggestions.";
+          if (await confirmAction(`Retirer ${c.name || 'ce client'} du carnet ?`, msg, 'Retirer')) {
+            await archiveClient(c.id);
+            router.back();
+          }
+        }}
+      />
     </ScrollView>
   );
 }
 
+function QuickAction({ label, url }: { label: string; url: string }) {
+  return (
+    <Pressable onPress={() => Linking.openURL(url)} style={styles.action} accessibilityRole="link">
+      <Text style={styles.actionText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  action: { borderWidth: 1, borderColor: Colors.primary, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: Colors.card },
+  actionText: { color: Colors.primary, fontSize: 15, fontWeight: '600' },
   container: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xl },
   text: { fontSize: 16, color: Colors.text },
   item: { paddingVertical: Spacing.sm, borderTopWidth: 1, borderTopColor: Colors.border },

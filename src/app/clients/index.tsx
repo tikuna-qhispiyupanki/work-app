@@ -1,9 +1,9 @@
 import { useQuery } from '@powersync/react';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Card, Field, Muted } from '@/components/ui';
+import { Button, Card, Field, Muted } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
 import { ClientRow, CLIENTS_SEARCH_SQL } from '@/db/clients';
 
@@ -15,6 +15,7 @@ export default function ClientsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <Button label="+ Nouveau client" onPress={() => router.push('/clients/nouveau')} />
       <Field label="Rechercher (nom, téléphone, commune)" value={q} onChangeText={setQ} autoCapitalize="none" />
       <Card title={`${clients.length} client${clients.length > 1 ? 's' : ''}`}>
         {isLoading ? <Muted>Chargement…</Muted> : null}
@@ -25,7 +26,10 @@ export default function ClientsScreen() {
           <Link key={c.id} href={{ pathname: '/clients/[id]', params: { id: c.id } }} asChild>
             <Pressable style={styles.item}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{c.name || 'Client sans nom'}</Text>
+                <Text style={styles.name}>
+                  {c.name || 'Client sans nom'}
+                  {c.kind === 'professionnel' ? ' · Pro' : ''}
+                </Text>
                 <Text style={styles.sub}>{[c.city, c.phone].filter(Boolean).join(' · ') || 'Coordonnées à compléter'}</Text>
               </View>
               <Text style={styles.sub}>

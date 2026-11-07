@@ -14,6 +14,7 @@ export function GeoMap(_props: {
   onTap?: (p: GeoPoint) => void;
   onViewChange?: () => void;
   hint?: string;
+  height?: number;
   ref?: Ref<GeoMapHandle>;
 }) {
   return <Text>Carte disponible dans la version web pour l&apos;instant.</Text>;
