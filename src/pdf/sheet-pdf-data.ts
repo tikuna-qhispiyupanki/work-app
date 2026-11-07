@@ -16,16 +16,18 @@ async function photoBytes(companyId: string, id: string | null): Promise<{ jpeg:
 }
 
 // Rassemble la fiche, l'équipe, le croquis et les signatures, et fabrique le PDF (sans réseau si tout est sur le téléphone).
-export async function sheetPdf(sheetId: string): Promise<{ data: ArrayBuffer; fileName: string }> {
+export async function sheetPdf(sheetId: string, printable = false): Promise<{ data: ArrayBuffer; fileName: string }> {
   const s = await db.get<SheetRow>(SHEET_SQL, [sheetId]);
-  const job = await db.get<{ title: string | null }>('SELECT title FROM jobs WHERE id = ?', [s.job_id]);
+  const job = await db.get<{ title: string | null; number: string | null }>('SELECT j.title, q.number FROM jobs j LEFT JOIN quotes q ON q.id = j.quote_id WHERE j.id = ?', [s.job_id]);
   const company = (await db.getOptional<{ name: string; address: string; postal_code: string; city: string; phone: string; siret: string; logo_photo_id: string | null }>('SELECT * FROM companies WHERE id = ?', [s.company_id])) ?? {};
   const team = await db.getAll<JobMemberRow>(JOB_TEAM_SQL, [s.job_id]);
   const acks = await db.getAll<AckRow>(SHEET_ACKS_SQL, [sheetId]);
   const data = buildSheetPdf({
+    printable,
     company,
     sheet: s,
     jobTitle: job.title ?? 'Chantier',
+    quoteNumber: job.number,
     team: team.map((t) => ({ name: t.name, role: ROLE_ON_JOB_LABEL[t.role_on_job] })),
     sketch: await photoBytes(s.company_id, s.sketch_photo_id),
     signatureJpeg: (await photoBytes(s.company_id, s.signature_photo_id))?.jpeg ?? null,
@@ -33,5 +35,5 @@ export async function sheetPdf(sheetId: string): Promise<{ data: ArrayBuffer; fi
     acks: await Promise.all(acks.map(async (a) => ({ name: a.name, acknowledged_at: a.acknowledged_at, signatureJpeg: (await photoBytes(s.company_id, a.signature_photo_id))?.jpeg ?? null }))),
   });
   const who = (job.title ?? 'chantier').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  return { data, fileName: `Fiche-intervention-${who}-v${s.version}.pdf` };
+  return { data, fileName: `Fiche-intervention-${who}-v${s.version}${printable ? '-a-imprimer' : ''}.pdf` };
 }

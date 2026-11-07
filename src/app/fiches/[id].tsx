@@ -16,8 +16,8 @@ import {
   acknowledgeSheet, AckRow, createSheet, saveSheetDefaults, JOB_TEAM_SQL, JobMemberRow, ROLE_ON_JOB_LABEL, SHEET_ACKS_SQL, SHEET_SQL, SheetField, SheetRow, signSheet, updateSheet,
 } from '@/db/jobs';
 import { toDate } from '@/domain/dates';
-import { EQUIPMENT, missingSheetFields, parseJson, preventionFor, RESPONSIBILITY, RISKS } from '@/domain/intervention';
-import type { EquipmentValue, RiskKey, RisksValue } from '@/domain/intervention';
+import { ACTIVITIES, EQUIPMENT_GROUPS, MEASURES, missingSheetFields, parseJson, preventionFor, RESCUE_CHECKS, RESPONSIBILITY, RISK_GROUP_LABEL, RISKS, TREE_CHECKS } from '@/domain/intervention';
+import type { CheckValue, RiskGroup, RiskKey, RisksValue } from '@/domain/intervention';
 import { emergencyBlock } from '@/domain/emergency';
 import { quickPosition } from '@/domain/geo';
 import { shareFile } from '@/pdf/share';
@@ -46,17 +46,16 @@ export default function SheetScreen() {
   if (isLoading) return <Muted>Chargement…</Muted>;
   if (!s) return <Muted>Fiche introuvable.</Muted>;
   const draft = s.status === 'brouillon';
-  const set = (f: SheetField) => (v: string | null) => void updateSheet(s.id, f, v).catch((e) => setError(String(e)));
+  const set = (f: SheetField) => (v: string | number | null) => void updateSheet(s.id, f, v).catch((e) => setError(String(e)));
   const risks = parseJson<RisksValue>(s.risks, { checked: [], other: '' });
-  const equipment = parseJson<EquipmentValue>(s.equipment, { checked: [], other: '' });
   const missing = missingSheetFields(s);
   const sketch = sketches.find((k) => k.id === s.sketch_photo_id);
 
-  const pdf = async () => {
+  const pdf = async (printable: boolean) => {
     setBusy(true);
     setError(null);
     try {
-      const p = await sheetPdf(s.id);
+      const p = await sheetPdf(s.id, printable);
       await shareFile(p.data, p.fileName);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -79,39 +78,41 @@ export default function SheetScreen() {
 
       <EmergencyCard company={companyName} address={job?.site_address ?? null} lat={job?.site_lat ?? null} lng={job?.site_lng ?? null} />
 
-      <Card title="1. Emplacement, travaux, équipements, dates">
-        <TextBlock key={`Emplacement:${s.location ?? ""}`} label="Emplacement" value={s.location} editable={draft} onSave={set('location')} />
-        <TextBlock key={`Travaux:${s.works ?? ""}`} label="Travaux" value={s.works} editable={draft} onSave={set('works')} />
-        <Text style={styles.label}>Équipements</Text>
-        <View style={styles.chips}>
-          {EQUIPMENT.map((e) => {
-            const on = equipment.checked.includes(e);
-            return (
-              <Pressable
-                key={e}
-                disabled={!draft}
-                onPress={() => set('equipment')(JSON.stringify({ ...equipment, checked: on ? equipment.checked.filter((x) => x !== e) : [...equipment.checked, e] }))}
-                style={[styles.chip, on && styles.chipOn]}
-                accessibilityRole="checkbox"
-                aria-checked={on} aria-disabled={!draft}
-              >
-                <Text style={[styles.chipText, on && { color: Colors.primaryText }]}>{e}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        <TextBlock key={`Autres équipements:${equipment.other ?? ""}`} label="Autres équipements" value={equipment.other} editable={draft} onSave={(v) => set('equipment')(JSON.stringify({ ...equipment, other: v ?? '' }))} />
+      <Card title="Identification">
+        <Field2 label="Téléphone de l'entreprise (en cas d'incident ou d'accident)" value={s.company_phone} editable={draft} onSave={set('company_phone')} keyboard="phone-pad" />
+        <Field2 label="Donneur d'ordre (client)" value={s.client_name} editable={draft} onSave={set('client_name')} />
+        <Field2 label="Téléphone du donneur d'ordre" value={s.client_phone} editable={draft} onSave={set('client_phone')} keyboard="phone-pad" />
+        <TextBlock key={`Emplacement:${s.location ?? ""}`} label="Lieu (adresse, coordonnées GPS)" value={s.location} editable={draft} onSave={set('location')} />
         {draft ? (
-          <View style={styles.row}>
-            <DateField label="Date de début" value={s.start_date} onChange={set('start_date')} />
-            <DateField label="Date de fin" value={s.end_date} onChange={set('end_date')} />
-          </View>
+          <>
+            <View style={styles.row}>
+              <DateField label="Date de début" value={s.start_date} onChange={set('start_date')} />
+              <DateField label="Date de fin" value={s.end_date} onChange={set('end_date')} />
+            </View>
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}><Field2 label="Heure de début" value={s.start_time} editable onSave={set('start_time')} placeholder="8h00" /></View>
+              <View style={{ flex: 1 }}><Field2 label="Heure de fin" value={s.end_time} editable onSave={set('end_time')} placeholder="16h00" /></View>
+            </View>
+          </>
         ) : (
           <Text style={styles.text}>
-            Du {toDate(s.start_date).toLocaleDateString('fr-FR')} au {toDate(s.end_date).toLocaleDateString('fr-FR')}
+            Du {toDate(s.start_date).toLocaleDateString('fr-FR')}{s.start_time ? ` (${s.start_time})` : ''} au {toDate(s.end_date).toLocaleDateString('fr-FR')}{s.end_time ? ` (${s.end_time})` : ''}
           </Text>
         )}
+        <Field2 label="Responsable de l'entreprise sur le chantier" value={s.site_manager_name} editable={draft} onSave={set('site_manager_name')} />
+        <Field2 label="Téléphone du responsable" value={s.site_manager_phone} editable={draft} onSave={set('site_manager_phone')} keyboard="phone-pad" />
+        <Field2 label="Nombre de travailleurs de l'entreprise" value={s.workers_count == null ? null : String(s.workers_count)} editable={draft} onSave={(v) => set('workers_count')(v && /^\d+$/.test(v.trim()) ? Number(v.trim()) : null)} keyboard="number-pad" />
         {team.length ? <Muted>Intervenants : {team.map((t) => `${t.name} (${ROLE_ON_JOB_LABEL[t.role_on_job]})`).join(', ')}</Muted> : <Text style={styles.warning}>Aucun intervenant : ajoute l&apos;équipe dans le chantier.</Text>}
+      </Card>
+
+      <Card title="1. Travaux à réaliser et matériels">
+        <CheckList label="Activités" items={ACTIVITIES} json={s.activities} editable={draft} onChange={set('activities')} />
+        <TextBlock key={`Travaux:${s.works ?? ""}`} label="Détail des travaux (repris du devis)" value={s.works} editable={draft} onSave={set('works')} />
+        {EQUIPMENT_GROUPS.map((g) => (
+          <CheckList key={g.title} label={g.title} items={g.items} json={s.equipment} editable={draft} onChange={set('equipment')} hideOther />
+        ))}
+        <OtherField label="Autres matériels" json={s.equipment} editable={draft} onChange={set('equipment')} />
+        <CheckList label="État sanitaire et physiologique des arbres" items={TREE_CHECKS} json={s.trees_state} editable={draft} onChange={set('trees_state')} />
       </Card>
 
       <Card title="2. Croquis (accès, circulation, végétaux à traiter)">
@@ -129,31 +130,43 @@ export default function SheetScreen() {
             ))}
           </ScrollView>
         ) : null}
+        <Muted>Sur le croquis : accès, voies de circulation, arbres à traiter, lignes électriques, zones de danger, point avec réseau téléphonique, point de rencontre des secours (PRS).</Muted>
       </Card>
 
       <Card title="3. Risques propres au chantier et à son environnement">
-        {RISKS.map((r) => {
-          const on = risks.checked.includes(r.key);
-          if (!draft && !on) return null;
+        {(Object.keys(RISK_GROUP_LABEL) as RiskGroup[]).map((g) => {
+          const items = RISKS.filter((r) => r.group === g);
+          if (!draft && !items.some((r) => risks.checked.includes(r.key))) return null;
           return (
-            <Pressable
-              key={r.key}
-              disabled={!draft}
-              style={styles.check}
-              onPress={() => set('risks')(JSON.stringify({ ...risks, checked: on ? risks.checked.filter((x) => x !== r.key) : [...risks.checked, r.key as RiskKey] }))}
-              accessibilityRole="checkbox"
-              aria-checked={on} aria-disabled={!draft}
-              accessibilityLabel={r.label}
-            >
-              <Icon name={on ? 'checkbox' : 'square-outline'} size={22} color={Colors.primary} />
-              <Text style={[styles.text, { flex: 1 }]}>{r.label}</Text>
-            </Pressable>
+            <View key={g} style={{ gap: 2 }}>
+              <Text style={styles.label}>{RISK_GROUP_LABEL[g]}</Text>
+              {items.map((r) => {
+                const on = risks.checked.includes(r.key);
+                if (!draft && !on) return null;
+                return (
+                  <Pressable
+                    key={r.key}
+                    disabled={!draft}
+                    style={styles.check}
+                    onPress={() => set('risks')(JSON.stringify({ ...risks, checked: on ? risks.checked.filter((x) => x !== r.key) : [...risks.checked, r.key as RiskKey] }))}
+                    accessibilityRole="checkbox"
+                    aria-checked={on} aria-disabled={!draft}
+                    accessibilityLabel={r.label}
+                  >
+                    <Icon name={on ? 'checkbox' : 'square-outline'} size={22} color={Colors.primary} />
+                    <Text style={[styles.text, { flex: 1 }]}>{r.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           );
         })}
-        <TextBlock key={`Autres risques:${risks.other ?? ""}`} label="Autres risques" value={risks.other} editable={draft} onSave={(v) => set('risks')(JSON.stringify({ ...risks, other: v ?? '' }))} />
+        <TextBlock key={`Autres risques:${risks.other ?? ""}`} label="Autres risques identifiés" value={risks.other} editable={draft} onSave={(v) => set('risks')(JSON.stringify({ ...risks, other: v ?? '' }))} />
       </Card>
 
       <Card title="4. Mesures de prévention">
+        <CheckList label="Mesures et règles d'organisation (dont balisage)" items={MEASURES} json={s.measures} editable={draft} onChange={set('measures')} />
+        <Field2 label="Mode de communication entre travailleurs" value={s.communication_mode} editable={draft} onSave={set('communication_mode')} />
         <TextBlock key={`Mesures de prévention:${s.prevention ?? ""}`} label="Mesures de prévention" value={s.prevention} editable={draft} onSave={set('prevention')} />
         {draft ? <SecondaryButton label="Reprendre les mesures proposées pour les risques cochés" icon="refresh-outline" onPress={() => set('prevention')(preventionFor(risks.checked))} /> : null}
       </Card>
@@ -161,6 +174,9 @@ export default function SheetScreen() {
         <TextBlock key={`Conduite à tenir:${s.accident_procedure ?? ""}`} label="Conduite à tenir" value={s.accident_procedure} editable={draft} onSave={set('accident_procedure')} />
       </Card>
       <Card title="6. Organisation des secours">
+        <CheckList label="Ressources humaines et matérielles" items={RESCUE_CHECKS} json={s.rescue_checks} editable={draft} onChange={set('rescue_checks')} />
+        <Field2 label="Où se trouve la trousse de secours" value={s.first_aid_location} editable={draft} onSave={set('first_aid_location')} />
+        <Field2 label="Point de rencontre des secours (PRS)" value={s.meeting_point} editable={draft} onSave={set('meeting_point')} />
         <TextBlock key={`Organisation des secours:${s.rescue ?? ""}`} label="Organisation des secours" value={s.rescue} editable={draft} onSave={set('rescue')} />
         <TextBlock key={`Numéros utiles, hôpital, point de rendez-vous des secours:${s.emergency_contacts ?? ""}`} label="Numéros utiles, hôpital, point de rendez-vous des secours" value={s.emergency_contacts} editable={draft} onSave={set('emergency_contacts')} />
         {draft && job?.site_lat != null ? (
@@ -174,6 +190,9 @@ export default function SheetScreen() {
       </Card>
       <Card title="7. Intempéries et phénomènes météo imprévus">
         <TextBlock key={`Consignes météo:${s.weather_procedure ?? ""}`} label="Consignes en cas d'intempéries" value={s.weather_procedure} editable={draft} onSave={set('weather_procedure')} />
+      </Card>
+      <Card title="Observations / consignes particulières">
+        <TextBlock key={`Observations:${s.observations ?? ""}`} label="Observations" value={s.observations} editable={draft} onSave={set('observations')} />
       </Card>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -192,7 +211,13 @@ export default function SheetScreen() {
       {draft ? <SignCard sheet={s} missing={missing} onError={setError} /> : null}
       {s.status === 'signee' ? <AcksCard sheet={s} acks={acks} team={team} onError={setError} /> : null}
 
-      <SecondaryButton label={busy ? 'Préparation du PDF…' : draft ? 'PDF de la fiche (brouillon)' : 'Envoyer la fiche (SMS, WhatsApp, e-mail…)'} icon={draft ? 'document-text-outline' : 'share-outline'} disabled={busy} onPress={pdf} />
+      <SecondaryButton label={busy ? 'Préparation du PDF…' : draft ? 'PDF de la fiche (brouillon)' : 'Envoyer la fiche (SMS, WhatsApp, e-mail…)'} icon={draft ? 'document-text-outline' : 'share-outline'} disabled={busy} onPress={() => pdf(false)} />
+      {s.status === 'signee' ? (
+        <>
+          <Button label={busy ? 'Préparation…' : 'Version papier à imprimer'} icon="print-outline" disabled={busy} onPress={() => pdf(true)} />
+          <Muted>Pour le chantier : la fiche complète, des lignes pour que chaque intervenant signe à la main, et une page « À afficher sur le chantier » (numéros d&apos;urgence, adresse, point de rencontre). Sur iPhone : touche « Imprimer » dans le menu de partage.</Muted>
+        </>
+      ) : null}
       {s.status === 'signee' ? (
         <SecondaryButton
           label="Corriger : nouvelle version"
@@ -207,6 +232,55 @@ export default function SheetScreen() {
       <Muted>{RESPONSIBILITY}</Muted>
     </ScrollView>
   );
+}
+
+function Field2({ label, value, editable, onSave, keyboard, placeholder }: { label: string; value: string | null; editable: boolean; onSave: (v: string | null) => void; keyboard?: 'phone-pad' | 'number-pad'; placeholder?: string }) {
+  const [t, setT] = useState(value ?? '');
+  if (!editable) {
+    return value ? (
+      <Text style={styles.text}>
+        <Text style={styles.label}>{label} : </Text>
+        {value}
+      </Text>
+    ) : null;
+  }
+  return <Field label={label} value={t} onChangeText={setT} onBlur={() => t !== (value ?? '') && onSave(t.trim() || null)} keyboardType={keyboard} placeholder={placeholder} />;
+}
+
+// Liste à cocher du modèle MSA, enregistrée en JSON {checked, other}. Plusieurs listes peuvent partager le même JSON.
+function CheckList({ label, items, json, editable, onChange, hideOther }: { label: string; items: string[]; json: string | null; editable: boolean; onChange: (v: string) => void; hideOther?: boolean }) {
+  const v = parseJson<CheckValue>(json, { checked: [], other: '' });
+  const shown = editable ? items : items.filter((i) => v.checked.includes(i));
+  if (!editable && !shown.length && !v.other) return null;
+  return (
+    <View style={{ gap: 2 }}>
+      <Text style={styles.label}>{label}</Text>
+      {shown.map((i) => {
+        const on = v.checked.includes(i);
+        return (
+          <Pressable
+            key={i}
+            disabled={!editable}
+            style={styles.check}
+            onPress={() => onChange(JSON.stringify({ ...v, checked: on ? v.checked.filter((x) => x !== i) : [...v.checked, i] }))}
+            accessibilityRole="checkbox"
+            aria-checked={on}
+            aria-disabled={!editable}
+            accessibilityLabel={i}
+          >
+            <Icon name={on ? 'checkbox' : 'square-outline'} size={22} color={Colors.primary} />
+            <Text style={[styles.text, { flex: 1 }]}>{i}</Text>
+          </Pressable>
+        );
+      })}
+      {!hideOther ? <OtherField label="Autres (à préciser)" json={json} editable={editable} onChange={onChange} /> : null}
+    </View>
+  );
+}
+
+function OtherField({ label, json, editable, onChange }: { label: string; json: string | null; editable: boolean; onChange: (v: string) => void }) {
+  const v = parseJson<CheckValue>(json, { checked: [], other: '' });
+  return <TextBlock key={`${label}:${v.other}`} label={label} value={v.other || null} editable={editable} onSave={(o) => onChange(JSON.stringify({ ...v, other: o ?? '' }))} />;
 }
 
 function TextBlock({ label, value, editable, onSave }: { label: string; value: string | null; editable: boolean; onSave: (v: string | null) => void }) {

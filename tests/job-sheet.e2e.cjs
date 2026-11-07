@@ -140,7 +140,7 @@ function pdfText(buf) {
   await tab(p, 'Fiche').click();
   await vis(p.getByRole('button', { name: "Préparer la fiche d'intervention", exact: true })).click();
   await vis(p.getByText(/Version 1 – brouillon/)).waitFor({ timeout: 15000 });
-  await p.waitForFunction(() => [...document.querySelectorAll('textarea[aria-label="Travaux"]')].some((e) => /Taille de palmier/.test(e.value)), null, { timeout: 10000 });
+  await p.waitForFunction(() => [...document.querySelectorAll('textarea[aria-label="Détail des travaux (repris du devis)"]')].some((e) => /Taille de palmier/.test(e.value)), null, { timeout: 10000 });
   await vis(p.getByAltText('Croquis de la fiche')).waitFor({ timeout: 15000 });
   const powerChecked = await vis(p.getByRole('checkbox', { name: 'Lignes électriques à proximité', exact: true })).getAttribute('aria-checked');
   if (powerChecked !== 'true') throw new Error('risque « lignes électriques » pas coché : ' + powerChecked + ' ' + (await vis(p.getByRole('checkbox', { name: 'Lignes électriques à proximité', exact: true })).evaluate((e) => e.outerHTML.slice(0, 300))));
@@ -151,8 +151,8 @@ function pdfText(buf) {
   await vis(p.getByText(/Lieu : 4 Rue des Barracudas.*GPS -21\.05330/)).waitFor();
   console.log('3. fiche pré-remplie : adresse + GPS, travaux du devis, image du plan, risque « lignes électriques » coché, intervenants, urgences les plus proches (CHOR, sans réseau), boutons d\'appel 15/18/17/112/SMS 114 et texte à dire au téléphone');
   await field('Date de fin').fill(day);
-  await vis(p.getByRole('checkbox', { name: 'Insectes (guêpes, frelons), animaux', exact: true })).click();
-  await p.waitForFunction(() => document.querySelector('[aria-label="Insectes (guêpes, frelons), animaux"]')?.getAttribute('aria-checked') === 'true', null, { timeout: 10000 });
+  await vis(p.getByRole('checkbox', { name: 'Frelons, guêpes et autres hyménoptères', exact: true })).click();
+  await p.waitForFunction(() => document.querySelector('[aria-label="Frelons, guêpes et autres hyménoptères"]')?.getAttribute('aria-checked') === 'true', null, { timeout: 10000 });
   await vis(p.getByRole('button', { name: 'Reprendre les mesures proposées pour les risques cochés', exact: true })).click();
   await p.waitForFunction(() => [...document.querySelectorAll('textarea[aria-label="Mesures de prévention"], input[aria-label="Mesures de prévention"]')].some((e) => /Inspection avant la montée/.test(e.value)), null, { timeout: 10000 });
   await field("Nom du chef d'entreprise").fill('Gérant Test');
@@ -179,12 +179,20 @@ function pdfText(buf) {
   const file = path.join(__dirname, 'out-fiche-intervention.pdf');
   await download.saveAs(file);
   const txt = pdfText(fs.readFileSync(file));
-  const must = ["FICHE D'INTERVENTION", '1. Emplacement', '2. Croquis', 'Lignes électriques à proximité', 'Insectes', '5. Conduite', '6. Organisation des secours', '7. Intempéries', 'Au téléphone, dire', 'par Gérant Test', 'Jean Chef', 'Lou Sauveteur', '(2 ans)', 'CHOR'];
+  const must = ["FICHE D'INTERVENTION", '1. Travaux à réaliser', '2. Croquis', 'Lignes électriques à proximité', 'Frelons', 'Identification', "Donneur d'ordre", 'Jean Chef', '5. Conduite', '6. Organisation des secours', '7. Conduite à tenir en cas de phénomènes', 'Au téléphone, dire', 'par Gérant Test', 'Jean Chef', 'Lou Sauveteur', '(2 ans)', 'CHOR'];
   const missing = must.filter((m) => !txt.includes(m));
   const images = (fs.readFileSync(file).toString('latin1').match(/\/Subtype \/Image/g) || []).length;
   if (missing.length || images < 3) throw new Error(`PDF incomplet : ${missing.join(', ')} ; images ${images}`);
   await p.screenshot({ path: 'tests/out-fiche.png' });
   console.log(`6. PDF de la fiche (hors ligne) : 7 rubriques, croquis + signatures (${images} images distinctes), ${Math.round(fs.statSync(file).size / 1024)} Ko`);
+
+  const [paper] = await Promise.all([p.waitForEvent('download', { timeout: 20000 }), vis(p.getByRole('button', { name: 'Version papier à imprimer', exact: true })).click()]);
+  const paperFile = path.join(__dirname, 'out-fiche-papier.pdf');
+  await paper.saveAs(paperFile);
+  const ptxt = pdfText(fs.readFileSync(paperFile));
+  const pm = ['À AFFICHER SUR LE CHANTIER', 'Nom et prénom', 'Point de rencontre des secours', 'Au téléphone, dire'].filter((m) => !ptxt.includes(m));
+  if (pm.length) throw new Error('version papier incomplète : ' + pm.join(', '));
+  console.log(`   version papier : « ${paper.suggestedFilename()} », lignes de signature à la main et page « À afficher sur le chantier »`);
 
   // 7. Retour du réseau : tout part au serveur, sans doublon de chantier
   await ctx.setOffline(false);

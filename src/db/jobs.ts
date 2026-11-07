@@ -92,7 +92,10 @@ export async function removeJobMember(id: string) {
 export type SheetRow = {
   id: string; company_id: string; job_id: string; version: number; status: 'brouillon' | 'signee' | 'remplacee'; location: string | null; works: string | null;
   equipment: string | null; start_date: string | null; end_date: string | null; sketch_photo_id: string | null; risks: string | null; prevention: string | null;
-  accident_procedure: string | null; rescue: string | null; weather_procedure: string | null; emergency_contacts: string | null; signer_name: string | null; signed_at: string | null;
+  accident_procedure: string | null; rescue: string | null; weather_procedure: string | null; emergency_contacts: string | null;
+  client_name: string | null; client_phone: string | null; company_phone: string | null; site_manager_name: string | null; site_manager_phone: string | null;
+  workers_count: number | null; start_time: string | null; end_time: string | null; activities: string | null; trees_state: string | null; measures: string | null;
+  communication_mode: string | null; rescue_checks: string | null; first_aid_location: string | null; meeting_point: string | null; observations: string | null; signer_name: string | null; signed_at: string | null;
   signature_photo_id: string | null; retain_until: string | null; created_at: string;
 };
 export const JOB_SHEETS_SQL = `SELECT * FROM intervention_sheets WHERE job_id = ? AND deleted_at IS NULL ORDER BY version DESC`;
@@ -100,7 +103,7 @@ export const SHEET_SQL = `SELECT * FROM intervention_sheets WHERE id = ?`;
 export const SHEET_ACKS_SQL = `SELECT id, member_id, name, acknowledged_at, signature_photo_id FROM intervention_sheet_acks WHERE sheet_id = ? AND deleted_at IS NULL ORDER BY acknowledged_at`;
 export type AckRow = { id: string; member_id: string | null; name: string; acknowledged_at: string; signature_photo_id: string | null };
 
-const SHEET_FIELDS = ['location', 'works', 'equipment', 'start_date', 'end_date', 'sketch_photo_id', 'risks', 'prevention', 'accident_procedure', 'rescue', 'weather_procedure', 'emergency_contacts'] as const;
+const SHEET_FIELDS = ['location', 'works', 'equipment', 'start_date', 'end_date', 'sketch_photo_id', 'risks', 'prevention', 'accident_procedure', 'rescue', 'weather_procedure', 'emergency_contacts', 'client_name', 'client_phone', 'company_phone', 'site_manager_name', 'site_manager_phone', 'workers_count', 'start_time', 'end_time', 'activities', 'trees_state', 'measures', 'communication_mode', 'rescue_checks', 'first_aid_location', 'meeting_point', 'observations'] as const;
 export type SheetField = (typeof SHEET_FIELDS)[number];
 
 // Dernier croquis de la visite (sinon l'image du plan) : proposé comme croquis de la fiche.
@@ -114,6 +117,24 @@ async function visitSketch(visitId: string | null): Promise<string | null> {
   return p?.id ?? null;
 }
 
+// Identification de la fiche (modèle MSA) : donneur d'ordre, téléphone de l'entreprise, responsable sur le chantier, effectif.
+async function identification(job: JobRow) {
+  const client = job.client_id ? await db.getOptional<{ name: string | null; phone: string | null }>('SELECT name, phone FROM clients WHERE id = ?', [job.client_id]) : null;
+  const company = await db.getOptional<{ phone: string | null }>('SELECT phone FROM companies WHERE id = ?', [job.company_id]);
+  const team = await db.getAll<{ name: string; phone: string | null; role_on_job: string }>(
+    `SELECT m.name, m.phone, jm.role_on_job FROM job_members jm JOIN team_members m ON m.id = jm.member_id WHERE jm.job_id = ? AND jm.deleted_at IS NULL`,
+    [job.id]
+  );
+  const chef = team.find((t) => t.role_on_job === 'chef') ?? null;
+  return {
+    clientName: client?.name ?? null,
+    clientPhone: client?.phone ?? null,
+    companyPhone: company?.phone ?? null,
+    manager: chef ? { name: chef.name, phone: chef.phone } : null,
+    workersCount: team.length || null,
+  };
+}
+
 // Nouvelle fiche, pré-remplie depuis la visite et le devis (ou copie de la dernière version pour la corriger).
 export async function createSheet(jobId: string): Promise<string> {
   const { companyId, userId } = currentIds();
@@ -122,9 +143,9 @@ export async function createSheet(jobId: string): Promise<string> {
   if (last?.status === 'brouillon') return last.id;
   const id = newId();
   const now = nowIso();
-  let fields: Record<SheetField, string | null>;
+  let fields: Record<SheetField, string | number | null>;
   if (last) {
-    fields = Object.fromEntries(SHEET_FIELDS.map((f) => [f, last[f]])) as Record<SheetField, string | null>;
+    fields = Object.fromEntries(SHEET_FIELDS.map((f) => [f, last[f]])) as Record<SheetField, string | number | null>;
   } else {
     const works = job.quote_id
       ? (await db.getAll<{ label: string }>(`SELECT label FROM quote_lines WHERE quote_id = ? AND deleted_at IS NULL AND kind IN ('prestation', 'libre', 'location') ORDER BY position`, [job.quote_id])).map((l) => l.label)
@@ -138,6 +159,7 @@ export async function createSheet(jobId: string): Promise<string> {
       start: job.planned_start,
       end: job.planned_end ?? job.planned_start,
       usesRopes: true,
+      ...(await identification(job)),
     });
     const company = await db.getOptional<{ sheet_defaults: string | null }>('SELECT sheet_defaults FROM companies WHERE id = ?', [companyId]);
     let defaults: SheetDefaults | null = null;
@@ -160,7 +182,7 @@ export async function createSheet(jobId: string): Promise<string> {
   return id;
 }
 
-export async function updateSheet(id: string, field: SheetField, value: string | null) {
+export async function updateSheet(id: string, field: SheetField, value: string | number | null) {
   const s = await db.get<{ status: string }>('SELECT status FROM intervention_sheets WHERE id = ?', [id]);
   if (s.status !== 'brouillon') throw new Error('Fiche signée : crée une nouvelle version pour la corriger.');
   await db.execute(`UPDATE intervention_sheets SET ${field} = ?, updated_at = ? WHERE id = ?`, [value, nowIso(), id]);

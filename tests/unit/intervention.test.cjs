@@ -17,10 +17,15 @@ function pdfStrings(buf) {
 }
 
 test('pré-remplissage depuis la visite et le devis', () => {
-  const f = iv.prefillSheet({ siteAddress: '5 allée des Lataniers, 97434 Saint-Gilles', lat: -21.05, lng: 55.23, works: ['Démontage (Manguier, arbre n° 1)'], nearPowerLines: true, start: '2026-11-20', end: '2026-11-20', usesRopes: true });
+  const f = iv.prefillSheet({ siteAddress: '5 allée des Lataniers, 97434 Saint-Gilles', lat: -21.05, lng: 55.23, works: ['Démontage (Manguier, arbre n° 1)', 'Rognage de souche'], nearPowerLines: true, start: '2026-11-20', end: '2026-11-20', usesRopes: true, companyPhone: '0692 00 00 01', manager: { name: 'Jean Chef', phone: null }, clientName: 'Mme Payet', workersCount: 2 });
   assert.match(f.location, /Lataniers/);
   assert.match(f.location, /GPS -21\.05000, 55\.23000/);
-  assert.equal(f.works, '• Démontage (Manguier, arbre n° 1)');
+  assert.equal(f.works, '• Démontage (Manguier, arbre n° 1)\n• Rognage de souche');
+  assert.deepEqual(JSON.parse(f.activities).checked, ['Démontage avec rétention', 'Rognage / essouchage']);
+  assert.ok(JSON.parse(f.measures).checked[0].startsWith('DT-DICT'), 'DT-DICT cochée (lignes électriques)');
+  assert.equal(f.site_manager_name, 'Jean Chef');
+  assert.match(f.meeting_point, /GPS -21\.05000/);
+  assert.deepEqual(iv.missingSheetFields({ ...f, company_phone: '', site_manager_name: null }), ["téléphone en cas d'incident", 'responsable sur le chantier']);
   const r = JSON.parse(f.risks);
   assert.ok(r.checked.includes('lignes_electriques'), 'lignes électriques cochées (visite)');
   assert.ok(r.checked.includes('chute_hauteur'));
@@ -36,7 +41,7 @@ test('contrôles avant signature', () => {
   assert.equal(iv.retainUntil(new Date('2026-11-20T08:00:00Z')), '2028-11-20');
 });
 
-test('PDF de la fiche : 6 rubriques, signatures, conservation, responsabilité', () => {
+test('PDF de la fiche : modèle MSA, signatures, conservation, responsabilité, version papier', () => {
   const f = iv.prefillSheet({ siteAddress: '1 rue du Test, 97400 Saint-Denis', lat: null, lng: null, works: ['Élagage'], nearPowerLines: false, start: '2026-11-20', end: '2026-11-21', usesRopes: true });
   const pdf = buildSheetPdf({
     company: { name: 'Élagage Test', city: 'Saint-Denis' },
@@ -45,8 +50,11 @@ test('PDF de la fiche : 6 rubriques, signatures, conservation, responsabilité',
     team: [{ name: 'Paul', role: 'Chef' }],
     acks: [{ name: 'Paul', acknowledged_at: '2026-11-20T04:00:00Z' }],
   });
+  // Version papier : lignes de signature à la main et page à afficher
+  const paper = pdfStrings(buildSheetPdf({ company: { name: 'Élagage Test' }, sheet: { ...f, version: 1, status: 'signee', signer_name: 'G', signed_at: '2026-11-19T06:00:00Z', retain_until: '2028-11-19' }, jobTitle: 'X', team: [], acks: [], printable: true }));
+  for (const m of ['À AFFICHER SUR LE CHANTIER', 'Nom et prénom', 'Signature', 'Au téléphone, dire', 'Autres (à préciser)']) assert.ok(paper.includes(m), `version papier, manque : ${m}`);
   const s = pdfStrings(pdf);
-  for (const m of ["FICHE D'INTERVENTION", '1. Emplacement', '2. Croquis', '3. Risques', '4. Mesures de prévention', "5. Conduite à tenir en cas d'accident", '6. Organisation des secours', '7. Intempéries', 'Au téléphone, dire', '114', 'Ne jamais raccrocher le premier', 'par Gérant Test', "jusqu'au 19/11/2028", 'Paul', 'la responsabilité restent celles de l']) {
+  for (const m of ["FICHE D'INTERVENTION", 'Identification', "Donneur d'ordre", 'Tél. (incident / accident)', '1. Travaux à réaliser', 'Élagage d\'entretien', 'Moyens d\'élévation', 'Nacelle (PEMP)', 'Matières', '2. Croquis', '3. Risques', 'HTB', 'Chenilles processionnaires', '4. Mesures de prévention', 'Balisage externe', 'Mode de communication', 'Point de rencontre des secours', "5. Conduite à tenir en cas d'accident", '6. Organisation des secours', '7. Conduite à tenir en cas de phénomènes', 'Au téléphone, dire', '114', 'Ne jamais raccrocher le premier', 'par Gérant Test', "jusqu'au 19/11/2028", 'Paul', 'la responsabilité restent celles de l']) {
     assert.ok(s.includes(m), `manque : ${m}`);
   }
 });
