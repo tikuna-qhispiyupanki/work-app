@@ -40,6 +40,8 @@ export type QuoteLineRow = {
   position: number;
   kind: LineKind;
   tree_id: string | null;
+  price_item_id: string | null;
+  note: string | null;
   label: string;
   unit: string | null;
   quantity: number;
@@ -89,7 +91,7 @@ async function activeGrid(): Promise<{ params: GridParams; items: ItemInput[] } 
 export async function createQuoteFromVisit(visitId: string): Promise<string> {
   const { companyId, userId } = currentIds();
   const grid = await activeGrid();
-  if (!grid) throw new Error('Aucune grille de prix : charge-la dans 👤 → « Grille de prix ».');
+  if (!grid) throw new Error('Aucune grille de prix : charge-la dans l’onglet « Plus » → « Grille de prix ».');
   const visit = await db.get<{ client_id: string; vat_zone: VatZone | null; site_address: string | null; site_postal_code: string | null; site_city: string | null }>(
     'SELECT client_id, vat_zone, site_address, site_postal_code, site_city FROM visits WHERE id = ?',
     [visitId]
@@ -119,6 +121,40 @@ export async function createQuoteFromVisit(visitId: string): Promise<string> {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
         [newId(), companyId, now, now, userId, id, i, l.kind, l.treeId, l.priceItemId, l.label, l.unit, l.quantity, l.unitPriceCents,
           l.retention ? 1 : 0, l.bigTrunk ? 1 : 0, l.urgent ? 1 : 0, l.surchargeBp, l.totalCents]
+      );
+    }
+  });
+  return id;
+}
+
+// Nouveau devis brouillon à partir d'un devis existant (refusé, expiré, signé…) : mêmes client, visite,
+// lignes, prix, remarques et conditions. Le devis d'origine ne change pas. La TVA suit le réglage actuel de l'entreprise.
+export async function copyQuote(sourceId: string): Promise<string> {
+  const { companyId, userId } = currentIds();
+  const src = await db.get<QuoteRow>(QUOTE_SQL, [sourceId]);
+  const lines = await db.getAll<QuoteLineRow>(QUOTE_LINES_SQL, [sourceId]);
+  const company = await db.getOptional<CompanyRow>(COMPANY_SQL, [companyId]);
+  const regime: VatRegime = company?.vat_regime ?? 'franchise';
+  const zone = (src.vat_zone as VatZone) ?? 'reunion';
+  const vatBp = vatRateBp(regime, zone);
+  const t = quoteTotalsFromLines(lines, vatBp);
+  const id = newId();
+  const now = nowIso();
+  await db.writeTransaction(async (tx) => {
+    await tx.execute(
+      `INSERT INTO quotes (id, company_id, created_at, updated_at, created_by, visit_id, client_id, status, vat_regime, vat_zone, vat_rate_bp,
+         site_address, subtotal_ht_cents, vat_cents, total_ttc_cents, payment_terms, deposit_bp, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'brouillon', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, companyId, now, now, userId, src.visit_id, src.client_id, regime, zone, vatBp, src.site_address, t.htCents, t.vatCents, t.ttcCents,
+        src.payment_terms, src.deposit_bp, src.notes]
+    );
+    for (const [i, l] of lines.entries()) {
+      await tx.execute(
+        `INSERT INTO quote_lines (id, company_id, created_at, updated_at, created_by, quote_id, position, kind, tree_id, price_item_id, label, unit,
+           quantity, unit_price_ht_cents, retention, big_trunk, urgent, surcharge_bp, total_ht_cents, offered, note)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [newId(), companyId, now, now, userId, id, i, l.kind, l.tree_id, l.price_item_id, l.label, l.unit, l.quantity, l.unit_price_ht_cents,
+          l.retention, l.big_trunk, l.urgent, l.surcharge_bp, l.total_ht_cents, l.offered ? 1 : 0, l.note]
       );
     }
   });

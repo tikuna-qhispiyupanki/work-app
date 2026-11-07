@@ -137,6 +137,23 @@ let page;
   console.log(`3. PDF téléchargé : « ${download.suggestedFilename()} », ${Math.round(fs.statSync(file).size / 1024)} Ko ; mentions ${missing.length ? 'MANQUANTES : ' + missing.join(', ') : 'toutes présentes'} ; images (logo + signature) : ${images}`);
   if (missing.length || !hasImage) throw new Error('PDF incomplet');
 
+  // 4. Nouveau devis à partir de celui-ci (copie modifiable, l'original ne bouge pas)
+  await vis(p.getByRole('button', { name: 'Nouveau devis à partir de celui-ci', exact: true })).click();
+  await vis(p.getByText('Devis (brouillon)')).waitFor({ timeout: 15000 });
+  await vis(p.getByText('Détail (2 lignes)')).waitFor();
+  await vis(p.getByText(/Geste commercial : 45\s€ HT offerts/)).waitFor();
+  await vis(p.getByText(/^177\s€$/)).waitFor();
+  await vis(p.getByText('Finaliser le devis')).click();
+  await vis(p.getByText(/^Devis D-\d{4}-\d{4}$/)).waitFor({ timeout: 15000 });
+  const number2 = (await vis(p.getByText(/^Devis D-\d{4}-\d{4}$/)).innerText()).replace('Devis ', '');
+  const both = await waitSql(
+    `select number, status from quotes where company_id = ${CO} and number in ('${number}', '${number2}') order by number`,
+    (r) => r.length === 2,
+    'copie du devis'
+  );
+  if (number2 === number || both.find((x) => x.number === number)?.status !== 'signe') throw new Error('copie incorrecte : ' + JSON.stringify(both));
+  console.log(`4. nouveau devis ${number2} créé à partir de ${number} (mêmes lignes, ligne offerte comprise) ; l'original reste signé`);
+
   console.log('Erreurs :', errors.length ? errors : 'aucune');
   await b.close();
   if (errors.length) process.exit(1);

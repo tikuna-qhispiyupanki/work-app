@@ -11,7 +11,7 @@ import { QuoteSign } from '@/components/quote-sign';
 import { Button, Card, Field, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
 import {
-  addQuoteLine, COMPANY_SQL, CompanyRow, deleteDraftQuote, finalizeQuote, missingCompanyFields, QUOTE_LINES_SQL, QUOTE_SQL,
+  addQuoteLine, COMPANY_SQL, copyQuote, CompanyRow, deleteDraftQuote, finalizeQuote, missingCompanyFields, QUOTE_LINES_SQL, QUOTE_SQL,
   QuoteLineRow, QuoteRow, removeQuoteLine, setQuoteNotes, setQuoteZone, updateQuoteLine,
 } from '@/db/quotes';
 import { toDate } from '@/domain/dates';
@@ -142,7 +142,25 @@ export default function QuoteScreen() {
           />
         </>
       ) : (
-        <QuoteSign quote={q} clientName={clientName} />
+        <>
+          <QuoteSign quote={q} clientName={clientName} />
+          <SecondaryButton
+            label={q.status === 'refuse' ? 'Refaire un devis à partir de celui-ci' : 'Nouveau devis à partir de celui-ci'}
+            icon="copy-outline"
+            onPress={async () => {
+              const ok = await confirmAction(
+                'Créer un nouveau devis ?',
+                `Un brouillon est créé avec les mêmes lignes, prix et remarques que le devis ${q.number ?? ''}. Tu pourras tout modifier avant de le finaliser. Ce devis-ci ne change pas.`,
+                'Créer le brouillon'
+              );
+              if (!ok) return;
+              await run(async () => {
+                const id = await copyQuote(q.id);
+                router.replace({ pathname: '/devis/[id]', params: { id } });
+              });
+            }}
+          />
+        </>
       )}
       <SecondaryButton
         label={busy ? 'Préparation du PDF…' : `PDF du devis${draft ? ' (brouillon)' : ''}`} icon="document-text-outline"
