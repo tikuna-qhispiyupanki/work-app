@@ -7,7 +7,9 @@ import { LOCAL_COMPANY_ID, LOCAL_USER_ID } from '@/db/database';
 
 // Tables que le téléphone a le droit d'envoyer. Les autres (entreprises, membres, profils)
 // sont seulement reçues du serveur.
-const UPLOADABLE = new Set(['clients', 'visits', 'trees', 'photos', 'price_grids', 'price_items']);
+const UPLOADABLE = new Set(['clients', 'visits', 'trees', 'photos', 'price_grids', 'price_items', 'quotes', 'quote_lines', 'companies']);
+// Tables qu'on modifie seulement (jamais créées depuis le téléphone).
+const UPDATE_ONLY = new Set(['companies']);
 
 // Erreurs définitives (refus des règles d'accès, donnée invalide) : réessayer ne servirait à rien
 // et bloquerait toute la file d'envoi. On les met de côté pour les montrer, puis on continue.
@@ -71,6 +73,7 @@ export const connector: PowerSyncBackendConnector = {
     if (!transaction) return;
     for (const op of transaction.crud) {
       if (!UPLOADABLE.has(op.table)) continue;
+      if (UPDATE_ONLY.has(op.table) && op.op !== UpdateType.PATCH) continue;
       const { error } = await send(op);
       if (!error) continue;
       if (isFatal(error.code)) {

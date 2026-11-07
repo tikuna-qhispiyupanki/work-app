@@ -37,7 +37,7 @@ Documents de référence :
 4. Visite et devis ← **en cours**
    - 4a. Fiche arbre complète (mesures, intervention de la grille avec suggestion selon la hauteur, quantité, contraintes, heures et m³, photos de l'arbre, estimation), arbre ajoutable sans carte (hors-ligne), estimation de la visite ✅ (validé) — migration 5, moteur `src/domain/quote-calc.ts` (exemple du calculateur Excel au centime près), `tree-estimate.ts`, écran `src/app/arbres/[id].tsx`, test `tree-sheet`.
    - 4a bis. Zoom « loupe » jusqu'au niveau 21 (IGN s'arrête à 19 : agrandissement ×2/×4), carte des arbres plus haute ; fiches clients (création directe, particulier/professionnel, appeler/SMS/e-mail/itinéraire, retrait du carnet) ✅ (à valider) — test `clients-manage`.
-   - 4b. Devis : calcul depuis la visite, franchise / TVA 8,5 % / 20 %, numérotation hors-ligne (blocs réservés), fiche entreprise
+   - 4b. Devis ← **en cours** : migration 6 (`quotes`, `quote_lines`, `quote_counters`, `reserve_quote_numbers`, verrouillage par déclencheurs après finalisation ; tests RLS 20-25), `src/domain/quote-build.ts` (= calculateur Excel), `src/db/quotes.ts`, réserve de numéros hors-ligne (`src/sync/quote-numbers.ts`, table locale `quote_number_pool`), écrans « Devis » et « Fiche entreprise ». Reste : redéploiement des Sync Streams par le fondateur (sinon les devis disparaissent du téléphone après envoi), puis `bash scripts/e2e.sh quote` étape 6.
    - 4c. Signature du client, verrouillage, PDF
    - 4d. Croquis (main levée sur page blanche ou sur photo)
 5. Fiche d'intervention et chantier
@@ -159,5 +159,7 @@ Le mot « Devis », un numéro suivi, la date, la durée de validité (30 jours 
 - Calcul du devis : fonction pure, testée par des tests unitaires qui reprennent l'exemple du calculateur Excel.
 - Tests unitaires : `npm run test:unit` (Node, sans compilation : `tests/unit/ts-resolve.mjs` résout « @/ » et les imports sans extension). Dans les fichiers de `src/domain/`, importer les types avec `import type`.
 - Grille de prix : le prix conseillé est **recalculé** depuis les données brutes du fichier (fourchette, base HT/TTC, coefficient) avec la formule Excel, et comparé au résultat d'Excel (écart signalé). Une nouvelle importation crée une nouvelle version active ; l'ancienne reste en archive. La grille de départ est copiée de `docs/` vers `public/` à la construction.
-- Après tout ajout de table synchronisée : mettre à jour `powersync/sync-config.yaml` (`npm run check:sync`), puis demander au fondateur de le recoller dans PowerSync (Sync Streams → Deploy).
+- Après tout ajout de table synchronisée : mettre à jour `powersync/sync-config.yaml` (`npm run check:sync`), puis demander au fondateur de le recoller dans PowerSync (Sync Streams → Deploy) **avant** de mettre en ligne l'écran qui l'utilise : une table absente des règles est effacée du téléphone après envoi (les données restent sur le serveur).
+- Remarques d'audit acceptées aussi : `quote_counters` sans règle (accès seulement par `reserve_quote_numbers`, qui vérifie les droits) et `reserve_quote_numbers` appelable par un utilisateur connecté.
+- Nettoyage des tests : `session_replication_role = replica` seulement pour supprimer les devis finalisés (sinon les suppressions en cascade d'`auth` sont aussi désactivées et laissent des orphelins).
 - Ne jamais mettre de clé secrète dans le dépôt.

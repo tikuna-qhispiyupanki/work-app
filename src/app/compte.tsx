@@ -36,6 +36,7 @@ export default function AccountScreen() {
       {company ? (
         <Card title={company.name}>
           <Muted>Mon rôle : {ROLE_LABEL[company.role]}</Muted>
+          <SecondaryButton label="🏢 Fiche entreprise (identité sur les devis)" onPress={() => router.push('/fiche-entreprise')} />
           <SecondaryButton label="💶 Grille de prix" onPress={() => router.push('/grille')} />
           <Muted>Fiche entreprise (SIRET, TVA, logo…) et invitation de l&apos;équipe : à venir.</Muted>
         </Card>

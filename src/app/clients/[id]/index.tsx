@@ -7,6 +7,8 @@ import { confirmAction } from '@/components/confirm';
 import { Button, Card, Muted, SecondaryButton } from '@/components/ui';
 import { Colors, Spacing } from '@/constants/theme';
 import { archiveClient, CLIENT_DETAIL_SQL, CLIENT_VISITS_SQL, ClientRow } from '@/db/clients';
+import { CLIENT_QUOTES_SQL } from '@/db/quotes';
+import { euros } from '@/domain/pricing';
 import { toDate } from '@/domain/dates';
 
 type HistoryRow = { id: string; visited_at: string; status: string; site_address: string | null; site_city: string | null; notes: string | null; tree_count: number };
@@ -16,6 +18,7 @@ export default function ClientScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, isLoading } = useQuery<ClientRow>(CLIENT_DETAIL_SQL, [id]);
   const { data: history } = useQuery<HistoryRow>(CLIENT_VISITS_SQL, [id]);
+  const { data: quotes } = useQuery<{ id: string; number: string | null; status: string; total_ttc_cents: number; created_at: string }>(CLIENT_QUOTES_SQL, [id]);
   const c = data[0];
 
   if (isLoading) return <Muted>Chargement…</Muted>;
@@ -64,7 +67,19 @@ export default function ClientScreen() {
             </Pressable>
           </Link>
         ))}
-        <Muted>Devis et chantiers apparaîtront ici à partir des étapes 4 et 5.</Muted>
+      </Card>
+
+      <Card title={`Devis (${quotes.length})`}>
+        {quotes.length === 0 ? <Muted>Aucun devis.</Muted> : null}
+        {quotes.map((q) => (
+          <Pressable key={q.id} style={styles.item} onPress={() => router.push({ pathname: '/devis/[id]', params: { id: q.id } })}>
+            <Text style={styles.name}>
+              {q.number ?? 'Brouillon'} · {euros(q.total_ttc_cents)}
+            </Text>
+            <Text style={styles.sub}>{{ brouillon: 'Brouillon', finalise: 'Finalisé', signe: '✓ Signé', refuse: 'Refusé' }[q.status] ?? q.status}</Text>
+          </Pressable>
+        ))}
+        <Muted>Les chantiers apparaîtront ici à l&apos;étape 5.</Muted>
       </Card>
 
       <Button label="+ Nouvelle visite pour ce client" onPress={() => router.push({ pathname: '/visites/nouvelle', params: { client: c.id } })} />

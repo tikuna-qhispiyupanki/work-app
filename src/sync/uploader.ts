@@ -5,6 +5,8 @@ import { storagePath, thumbKey } from '@/db/photos';
 import { makeThumbnail } from '@/files/image';
 import { readFile, saveFile } from '@/files/local-files';
 
+import { ensureQuoteNumbers } from './quote-numbers';
+
 // Envoi des fichiers photo vers l'espace de stockage privé (Supabase Storage).
 // Les informations de la photo (date, GPS, légende) voyagent avec PowerSync ; le fichier, lui, passe ici.
 // - fonctionne avec une file d'attente sur le téléphone (table locale upload_queue) ;
@@ -18,9 +20,13 @@ let running = false;
 
 export function startUploader() {
   if (timer || typeof window === 'undefined') return;
-  timer = setInterval(() => void uploadPending(), 20000);
+  timer = setInterval(() => {
+    void uploadPending();
+    void ensureQuoteNumbers();
+  }, 20000);
   window.addEventListener('online', kick);
   void uploadPending();
+  void ensureQuoteNumbers();
 }
 
 export function stopUploader() {

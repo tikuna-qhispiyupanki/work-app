@@ -7,6 +7,7 @@ import { confirmAction } from '@/components/confirm';
 import { LocalImage } from '@/components/local-image';
 import { Button, Card, Muted, SecondaryButton } from '@/components/ui';
 import { VisitPhotos } from '@/components/visit-photos';
+import { VisitQuotes } from '@/components/visit-quotes';
 import { VisitTrees } from '@/components/visit-trees';
 import { Colors, Spacing } from '@/constants/theme';
 import { deleteVisit, setVisitStatus, VISIT_DETAIL_SQL, VISIT_PLAN_SQL } from '@/db/visits';
@@ -123,6 +124,8 @@ export default function VisitScreen() {
 
       <VisitTrees visitId={v.id} site={v.site_lat != null && v.site_lng != null ? { lat: v.site_lat, lng: v.site_lng } : null} />
 
+      <VisitQuotes visitId={v.id} />
+
       {v.notes ? (
         <Card title="Notes">
           <Text style={styles.text}>{v.notes}</Text>
@@ -141,7 +144,7 @@ export default function VisitScreen() {
           <SecondaryButton label="Supprimer" danger onPress={remove} />
         </View>
       </View>
-      <Muted>Fiche détaillée des arbres, croquis et devis : étape 4.</Muted>
+      <Muted>Croquis : étape 4d.</Muted>
     </ScrollView>
   );
 }

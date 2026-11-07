@@ -17,7 +17,13 @@ cleanup() {
   out=$(sql <<SQL
 do \$\$ declare cids uuid[]; begin
   select array_agg(company_id) into cids from public.memberships where user_id = '$UID_TEST';
-  -- Ordre : d'abord ce qui pointe vers autre chose (photos → arbres → visites → clients → grille → entreprise).
+  -- Les devis finalisés sont protégés par des déclencheurs : on les suspend pour CE nettoyage seulement.
+  set local session_replication_role = replica;
+  -- Ordre : d'abord ce qui pointe vers autre chose (devis → photos → arbres → visites → clients → grille → entreprise).
+  delete from public.quote_lines where company_id = any(cids);
+  delete from public.quotes where company_id = any(cids);
+  delete from public.quote_counters where company_id = any(cids);
+  set local session_replication_role = origin; -- protections et suppressions en cascade rétablies
   delete from public.photos where company_id = any(cids);
   delete from public.trees where company_id = any(cids);
   delete from public.visits where company_id = any(cids);
@@ -27,6 +33,9 @@ do \$\$ declare cids uuid[]; begin
   delete from public.memberships where company_id = any(cids);
   delete from public.companies where id = any(cids);
   delete from public.profiles where id = '$UID_TEST';
+  delete from auth.refresh_tokens where user_id = '$UID_TEST';
+  delete from auth.sessions where user_id = '$UID_TEST';
+  delete from auth.identities where user_id = '$UID_TEST';
   delete from auth.users where id = '$UID_TEST';
 end \$\$;
 SQL
@@ -52,7 +61,7 @@ case "$created" in *'"n":1'*) echo "Compte de test créé." ;; *) echo "⚠ Cré
 
 status=0
 if [ "${1:-}" = "--debug" ]; then shift; node "$@"; exit $?; fi
-TESTS="${*:-auth offline-visit visit-geo-manage clients-trees clients-manage sync photos grid tree-sheet}"
+TESTS="${*:-auth offline-visit visit-geo-manage clients-trees clients-manage sync photos grid tree-sheet quote}"
 for t in $TESTS; do
   echo "== $t"
   node "tests/$t.e2e.cjs" 2>&1 | grep -v "agent-proxy\|cdp.expo\|For details" || status=1

@@ -102,6 +102,10 @@ const photos = new Table(
 // Reçues du serveur uniquement (jamais modifiées sur le téléphone).
 const companies = new Table({
   name: column.text,
+  legal_form: column.text,
+  insurance_name: column.text,
+  insurance_policy: column.text,
+  insurance_area: column.text,
   siret: column.text,
   address: column.text,
   postal_code: column.text,
@@ -164,6 +168,61 @@ const price_items = new Table(
   { indexes: { by_grid: ['grid_id', 'sort_order'] } }
 );
 
+// Devis et leurs lignes (montants en centimes).
+const quotes = new Table(
+  {
+    ...common,
+    visit_id: column.text,
+    client_id: column.text,
+    number: column.text,
+    status: column.text, // 'brouillon' | 'finalise' | 'signe' | 'refuse'
+    issued_on: column.text,
+    valid_until: column.text,
+    vat_regime: column.text,
+    vat_zone: column.text,
+    vat_rate_bp: column.integer,
+    company_snapshot: column.text,
+    client_snapshot: column.text,
+    site_address: column.text,
+    subtotal_ht_cents: column.integer,
+    vat_cents: column.integer,
+    total_ttc_cents: column.integer,
+    payment_terms: column.text,
+    deposit_bp: column.integer,
+    notes: column.text,
+    signed_at: column.text,
+    signer_name: column.text,
+    signature_photo_id: column.text,
+    signed_lat: column.real,
+    signed_lng: column.real,
+  },
+  { indexes: { by_visit: ['visit_id'] } }
+);
+const quote_lines = new Table(
+  {
+    ...common,
+    quote_id: column.text,
+    position: column.integer,
+    kind: column.text,
+    tree_id: column.text,
+    price_item_id: column.text,
+    label: column.text,
+    unit: column.text,
+    quantity: column.real,
+    unit_price_ht_cents: column.integer,
+    retention: column.integer,
+    big_trunk: column.integer,
+    urgent: column.integer,
+    surcharge_bp: column.integer,
+    total_ht_cents: column.integer,
+    note: column.text,
+  },
+  { indexes: { by_quote: ['quote_id', 'position'] } }
+);
+
+// Numéros de devis réservés sur le serveur, utilisables hors-ligne (seulement sur ce téléphone).
+const quote_number_pool = new Table({ company_id: column.text, year: column.integer, number: column.integer }, { localOnly: true });
+
 // File d'envoi des fichiers photo (seulement sur ce téléphone, jamais synchronisée).
 const upload_queue = new Table(
   {
@@ -177,7 +236,8 @@ const upload_queue = new Table(
 );
 
 export const AppSchema = new Schema({
-  clients, visits, trees, photos, companies, memberships, profiles, price_grids, price_items, upload_queue,
+  clients, visits, trees, photos, companies, memberships, profiles, price_grids, price_items, quotes, quote_lines,
+  quote_number_pool, upload_queue,
 });
 
 export type Database = (typeof AppSchema)['types'];

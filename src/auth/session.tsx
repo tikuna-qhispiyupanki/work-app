@@ -53,7 +53,7 @@ const writeCache = (userId: string, c: ActiveCompany | null) => {
 // (Les envois en attente sont corrigés de la même façon au moment de la synchronisation, étape 2c-3.)
 async function adoptLocalData(companyId: string, userId: string) {
   await db.writeTransaction(async (tx) => {
-    for (const table of ['clients', 'visits', 'trees', 'photos', 'price_grids', 'price_items']) {
+    for (const table of ['clients', 'visits', 'trees', 'photos', 'price_grids', 'price_items', 'quotes', 'quote_lines']) {
       await tx.execute(`UPDATE ${table} SET company_id = ?, created_by = ? WHERE company_id = ?`, [companyId, userId, LOCAL_COMPANY_ID]);
       await tx.execute(`UPDATE ${table} SET created_by = ? WHERE created_by = ?`, [userId, LOCAL_USER_ID]);
     }

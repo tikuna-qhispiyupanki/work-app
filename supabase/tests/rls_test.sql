@@ -148,6 +148,43 @@ begin
   results := results || format(E'\n19. B (autre entreprise) voit %s grille de A (attendu 0) : %s', n, case when n = 0 then 'OK' else 'ÉCHEC' end);
   execute 'reset role';
 
+  -- 20-25. Devis : numérotation, verrouillage après finalisation, isolement
+  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select first_number into n from public.reserve_quote_numbers(ca, 2026, 10);
+  results := results || format(E'\n20. A réserve 10 numéros de devis : premier n° %s : %s', n, case when n = 1 then 'OK' else 'ÉCHEC' end);
+  select first_number into n from public.reserve_quote_numbers(ca, 2026, 5);
+  results := results || format(E'\n21. Réservation suivante : premier n° %s (attendu 11, pas de doublon) : %s', n, case when n = 11 then 'OK' else 'ÉCHEC' end);
+  insert into public.quotes (id, company_id, client_id) values ('aaaaaaaa-5555-4000-8000-00000000000a', ca, cli_a);
+  insert into public.quote_lines (id, company_id, quote_id, kind, label, total_ht_cents) values (gen_random_uuid(), ca, 'aaaaaaaa-5555-4000-8000-00000000000a', 'libre', 'Ligne', 1000);
+  update public.quotes set status = 'finalise', number = 'D-2026-0001', subtotal_ht_cents = 1000 where id = 'aaaaaaaa-5555-4000-8000-00000000000a';
+  begin
+    update public.quotes set subtotal_ht_cents = 1 where id = 'aaaaaaaa-5555-4000-8000-00000000000a';
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n22. A modifie le montant d''un devis finalisé : %s', case when ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
+  begin
+    insert into public.quote_lines (id, company_id, quote_id, kind, label) values (gen_random_uuid(), ca, 'aaaaaaaa-5555-4000-8000-00000000000a', 'libre', 'Ajout');
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n23. A ajoute une ligne à un devis finalisé : %s', case when ok then 'refusé → OK' else 'accepté → ÉCHEC' end);
+  update public.quotes set status = 'signe', signer_name = 'Client A', signed_at = now() where id = 'aaaaaaaa-5555-4000-8000-00000000000a';
+  select count(*) into n from public.quotes where id = 'aaaaaaaa-5555-4000-8000-00000000000a' and status = 'signe';
+  results := results || format(E'\n24. A enregistre la signature du client : %s', case when n = 1 then 'OK' else 'ÉCHEC' end);
+  execute 'reset role';
+  perform set_config('request.jwt.claims', json_build_object('sub', ub, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select count(*) into n from public.quotes where company_id = ca;
+  begin
+    perform public.reserve_quote_numbers(ca, 2026, 1);
+    ok := false;
+  exception when others then ok := true;
+  end;
+  results := results || format(E'\n25. B voit %s devis de A et réserve des numéros chez A : %s', n, case when n = 0 and ok then 'refusé → OK' else 'ÉCHEC' end);
+  execute 'reset role';
+
   -- 12. Un visiteur non connecté ne voit rien
   perform set_config('request.jwt.claims', '', true);
   execute 'set local role anon';
